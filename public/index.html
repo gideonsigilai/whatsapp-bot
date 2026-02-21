@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WA Bot Server — Dashboard</title>
+    <meta
+      name="description"
+      content="WhatsApp Bot API Dashboard — send messages, manage groups, configure webhooks"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>"
+    />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="header-left">
+          <div class="header-logo">💬</div>
+          <h1>WA Bot Server</h1>
+        </div>
+        <div class="header-right">
+        <a href="/docs.html" class="btn btn-secondary btn-sm" style="text-decoration:none;">📖 API Docs</a>
+          <span
+            class="tunnel-url"
+            id="tunnelUrl"
+            title="Click to copy"
+            onclick="copyTunnel()"
+            >No tunnel active</span
+          >
+          <div class="status-badge disconnected" id="statusBadge">
+            <span class="status-dot"></span>
+            <span id="statusText">Disconnected</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- QR Overlay -->
+    <div class="qr-overlay" id="qrOverlay">
+      <div class="qr-card">
+        <h2>📱 Scan QR Code</h2>
+        <p>
+          Open WhatsApp on your phone → Settings → Linked Devices → Link a
+          Device
+        </p>
+        <img id="qrImage" src="" alt="QR Code" />
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Messages Sent</div>
+          <div class="stat-value" id="statSent">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Messages Received</div>
+          <div class="stat-value" id="statReceived">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Active Groups</div>
+          <div class="stat-value" id="statGroups">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Webhooks</div>
+          <div class="stat-value" id="statWebhooks">0</div>
+        </div>
+      </div>
+
+      <!-- Content Grid -->
+      <div class="content-grid">
+        <!-- Left Column: Actions -->
+        <div>
+          <!-- Send Message -->
+          <div class="card" style="margin-bottom: 24px">
+            <div class="card-header">
+              <span class="card-title"
+                ><span class="icon">✉️</span> Send Message</span
+              >
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Phone Number (with country code)</label>
+                <input
+                  class="form-control"
+                  type="text"
+                  id="msgNumber"
+                  placeholder="e.g. 254712345678"
+                />
+              </div>
+              <div class="form-group">
+                <label>Message</label>
+                <textarea
+                  class="form-control"
+                  id="msgBody"
+                  placeholder="Type your message..."
+                ></textarea>
+              </div>
+              <button class="btn btn-primary btn-block" onclick="sendMessage()">
+                <span>Send Message</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Send Group Message -->
+          <div class="card" style="margin-bottom: 24px">
+            <div class="card-header">
+              <span class="card-title"
+                ><span class="icon">👥</span> Send Group Message</span
+              >
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Select Group</label>
+                <select class="form-control" id="groupSelect">
+                  <option value="">Loading groups...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Message</label>
+                <textarea
+                  class="form-control"
+                  id="groupMsgBody"
+                  placeholder="Type your message..."
+                ></textarea>
+              </div>
+              <button
+                class="btn btn-primary btn-block"
+                onclick="sendGroupMessage()"
+              >
+                <span>Send to Group</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Group Actions -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title"
+                ><span class="icon">🔗</span> Group Actions</span
+              >
+            </div>
+            <div class="card-body">
+              <div class="tab-bar">
+                <button
+                  class="tab-btn active"
+                  onclick="switchTab(this, 'tabJoin')"
+                >
+                  Join
+                </button>
+                <button class="tab-btn" onclick="switchTab(this, 'tabAdd')">
+                  Add Members
+                </button>
+              </div>
+              <div
+                class="tab-content active"
+                id="tabJoin"
+                style="padding-top: 16px"
+              >
+                <div class="form-group">
+                  <label>Invite Link</label>
+                  <input
+                    class="form-control"
+                    type="text"
+                    id="inviteLink"
+                    placeholder="https://chat.whatsapp.com/..."
+                  />
+                </div>
+                <button class="btn btn-primary btn-block" onclick="joinGroup()">
+                  Join Group
+                </button>
+              </div>
+              <div class="tab-content" id="tabAdd" style="padding-top: 16px">
+                <div class="form-group">
+                  <label>Select Group</label>
+                  <select class="form-control" id="addGroupSelect">
+                    <option value="">Loading groups...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Phone Numbers (comma-separated)</label>
+                  <input
+                    class="form-control"
+                    type="text"
+                    id="addParticipants"
+                    placeholder="254712345678, 254798765432"
+                  />
+                </div>
+                <button
+                  class="btn btn-primary btn-block"
+                  onclick="addToGroup()"
+                >
+                  Add Members
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column -->
+        <div>
+          <!-- Message Log -->
+          <div class="card" style="margin-bottom: 24px">
+            <div class="card-header">
+              <span class="card-title"
+                ><span class="icon">📋</span> Message Log</span
+              >
+              <button
+                class="btn btn-secondary btn-sm"
+                onclick="refreshMessages()"
+              >
+                Refresh
+              </button>
+            </div>
+            <div class="message-log" id="messageLog">
+              <div class="empty-state">
+                <div class="icon">💬</div>
+                <p>No messages yet</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Groups -->
+          <div class="card" style="margin-bottom: 24px">
+            <div class="card-header">
+              <span class="card-title"
+                ><span class="icon">👥</span> Groups</span
+              >
+              <button
+                class="btn btn-secondary btn-sm"
+                onclick="refreshGroups()"
+              >
+                Refresh
+              </button>
+            </div>
+            <div class="group-list" id="groupList">
+              <div class="empty-state">
+                <div class="icon">👥</div>
+                <p>No groups found</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Webhooks -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title"
+                ><span class="icon">🔔</span> Webhooks</span
+              >
+            </div>
+            <div class="card-body">
+              <div class="inline-form" style="margin-bottom: 12px">
+                <input
+                  class="form-control"
+                  type="text"
+                  id="hookUrl"
+                  placeholder="https://your-webhook-url.com/endpoint"
+                />
+                <button class="btn btn-primary" onclick="registerHook()">
+                  Add
+                </button>
+              </div>
+              <div id="hookList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

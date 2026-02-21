@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Documentation — WA Bot Server</title>
+  <meta name="description" content="WhatsApp Bot API documentation — endpoints, request/response schemas, and code examples">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <style>
+    .docs-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .docs-layout { grid-template-columns: 1fr; }
+      .docs-sidebar { display: none; }
+    }
+
+    /* Sidebar */
+    .docs-sidebar {
+      position: sticky;
+      top: 88px;
+    }
+
+    .sidebar-nav {
+      list-style: none;
+      padding: 0;
+    }
+
+    .sidebar-nav li { margin-bottom: 2px; }
+
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: var(--radius-xs);
+      transition: var(--transition);
+    }
+
+    .sidebar-nav a:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+    }
+
+    .sidebar-nav a.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .sidebar-section {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      padding: 16px 14px 6px;
+    }
+
+    /* Docs Content */
+    .docs-content {
+      min-width: 0;
+    }
+
+    .docs-hero {
+      margin-bottom: 32px;
+    }
+
+    .docs-hero h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent));
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .docs-hero p {
+      color: var(--text-secondary);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .base-url-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 12px 16px;
+      margin-top: 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    .base-url-box .label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Endpoint Card */
+    .endpoint {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .endpoint:hover {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .endpoint-header:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .method-badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.5px;
+      min-width: 56px;
+      text-align: center;
+    }
+
+    .method-badge.get {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .method-badge.post {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(37, 211, 102, 0.2);
+    }
+
+    .method-badge.delete {
+      background: var(--danger-dim);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .endpoint-path {
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      color: var(--text-primary);
+    }
+
+    .endpoint-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .endpoint-chevron {
+      color: var(--text-muted);
+      transition: transform 0.2s ease;
+      font-size: 12px;
+    }
+
+    .endpoint.open .endpoint-chevron {
+      transform: rotate(90deg);
+    }
+
+    .endpoint-body {
+      display: none;
+      padding: 0 20px 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    .endpoint.open .endpoint-body {
+      display: block;
+    }
+
+    .endpoint-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin: 16px 0 8px;
+    }
+
+    /* Code Blocks */
+    .code-block {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 14px 16px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      overflow-x: auto;
+      color: var(--text-secondary);
+      position: relative;
+    }
+
+    .code-block .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: var(--transition);
+    }
+
+    .code-block .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--text-primary);
+    }
+
+    .code-block .kw { color: #c084fc; }
+    .code-block .str { color: #86efac; }
+    .code-block .key { color: #93c5fd; }
+    .code-block .num { color: #fbbf24; }
+    .code-block .cmt { color: #6b7280; font-style: italic; }
+
+    /* Params Table */
+    .params-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .params-table th {
+      text-align: left;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .params-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .params-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .param-name {
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .param-type {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(139, 92, 246, 0.15);
+      color: #a78bfa;
+    }
+
+    .param-required {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--danger-dim);
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    /* Back link */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      margin-bottom: 20px;
+      transition: var(--transition);
+    }
+
+    .back-link:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="header-logo">📖</div>
+        <h1>API Documentation</h1>
+      </div>
+      <div class="header-right">
+        <a href="/" class="btn btn-secondary btn-sm">← Dashboard</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="docs-layout">
+
+      <!-- Sidebar -->
+      <aside class="docs-sidebar">
+        <nav>
+          <ul class="sidebar-nav">
+            <li class="sidebar-section">Overview</li>
+            <li><a href="#overview" class="active">🏠 Getting Started</a></li>
+            <li class="sidebar-section">Messaging</li>
+            <li><a href="#send-message">✉️ Send Message</a></li>
+            <li><a href="#send-group-message">👥 Send Group Message</a></li>
+            <li><a href="#get-messages">📋 Get Messages</a></li>
+            <li class="sidebar-section">Groups</li>
+            <li><a href="#get-groups">📂 List Groups</a></li>
+            <li><a href="#join-group">🔗 Join Group</a></li>
+            <li><a href="#leave-group">🚪 Leave Group</a></li>
+            <li><a href="#add-to-group">➕ Add to Group</a></li>
+            <li class="sidebar-section">Webhooks</li>
+            <li><a href="#list-hooks">🔔 List Webhooks</a></li>
+            <li><a href="#register-hook">📌 Register Webhook</a></li>
+            <li><a href="#unregister-hook">🗑️ Remove Webhook</a></li>
+            <li class="sidebar-section">System</li>
+            <li><a href="#get-status">📡 Bot Status</a></li>
+            <li><a href="#get-stats">📊 Statistics</a></li>
+            <li><a href="#get-tunnel">☁️ Tunnel URL</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Content -->
+      <div class="docs-content">
+
+        <!-- Hero -->
+        <div class="docs-hero" id="overview">
+          <h1>WA Bot Server API</h1>
+          <p>Complete REST API reference for the WhatsApp Bot server. All endpoints accept and return JSON. Use the base URL below for all requests.</p>
+          <div class="base-url-box">
+            <span class="label">Base URL</span>
+            <code id="baseUrl">http://localhost:3000</code>
+          </div>
+        </div>
+
+        <!-- ═══════════════ MESSAGING ═══════════════ -->
+
+        <!-- POST /api/send-message -->
+        <div class="endpoint" id="send-message">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge post">POST</span>
+            <span class="endpoint-path">/api/send-message</span>
+            <span class="endpoint-desc">Send a message to a phone number</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Request Body</p>
+            <table class="params-table">
+              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">number</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-required">Required</span></td>
+                  <td>Phone number with country code (e.g. <code>254712345678</code>)</td>
+                </tr>
+                <tr>
+                  <td><span class="param-name">message</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-required">Required</span></td>
+                  <td>The message text to send</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> -X POST http://localhost:3000/api/send-message \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "number": "254712345678",
+    "message": "Hello from the bot!"
+  }'</span>
+            </div>
+
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+{
+  <span class="key">"success"</span>: <span class="kw">true</span>,
+  <span class="key">"message"</span>: {
+    <span class="key">"id"</span>: <span class="str">"true_254712345678@c.us_3EB0..."</span>,
+    <span class="key">"from"</span>: <span class="str">"me"</span>,
+    <span class="key">"to"</span>: <span class="str">"254712345678@c.us"</span>,
+    <span class="key">"body"</span>: <span class="str">"Hello from the bot!"</span>,
+    <span class="key">"timestamp"</span>: <span class="str">"2026-02-21T12:00:00.000Z"</span>,
+    <span class="key">"type"</span>: <span class="str">"sent"</span>
+  }
+}
+            </div>
+          </div>
+        </div>
+
+        <!-- POST /api/send-group-message -->
+        <div class="endpoint" id="send-group-message">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge post">POST</span>
+            <span class="endpoint-path">/api/send-group-message</span>
+            <span class="endpoint-desc">Send a message to a group</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Request Body</p>
+            <table class="params-table">
+              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">groupId</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-required">Required</span></td>
+                  <td>Group ID (e.g. <code>120363012345@g.us</code>). Get from <code>/api/groups</code></td>
+                </tr>
+                <tr>
+                  <td><span class="param-name">message</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-required">Required</span></td>
+                  <td>The message text to send</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> -X POST http://localhost:3000/api/send-group-message \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "groupId": "120363012345@g.us",
+    "message": "Hello group!"
+  }'</span>
+            </div>
+
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+{
+  <span class="key">"success"</span>: <span class="kw">true</span>,
+  <span class="key">"message"</span>: {
+    <span class="key">"id"</span>: <span class="str">"true_120363012345@g.us_3EB0..."</span>,
+    <span class="key">"from"</span>: <span class="str">"me"</span>,
+    <span class="key">"to"</span>: <span class="str">"120363012345@g.us"</span>,
+    <span class="key">"body"</span>: <span class="str">"Hello group!"</span>,
+    <span class="key">"type"</span>: <span class="str">"sent"</span>,
+    <span class="key">"isGroup"</span>: <span class="kw">true</span>
+  }
+}
+            </div>
+          </div>
+        </div>
+
+        <!-- GET /api/messages -->
+        <div class="endpoint" id="get-messages">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge get">GET</span>
+            <span class="endpoint-path">/api/messages</span>
+            <span class="endpoint-desc">Get recent message log</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Query Parameters</p>
+            <table class="params-table">
+              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">limit</span></td>
+                  <td><span class="param-type">number</span></td>
+                  <td></td>
+                  <td>Max messages to return (default: <code>50</code>)</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/messages?limit=10
+            </div>
+
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+[
+  {
+    <span class="key">"id"</span>: <span class="str">"true_254712345678@c.us_3EB0..."</span>,
+    <span class="key">"from"</span>: <span class="str">"254712345678@c.us"</span>,
+    <span class="key">"body"</span>: <span class="str">"Hey!"</span>,
+    <span class="key">"timestamp"</span>: <span class="str">"2026-02-21T12:00:00.000Z"</span>,
+    <span class="key">"type"</span>: <span class="str">"received"</span>,
+    <span class="key">"contactName"</span>: <span class="str">"John"</span>,
+    <span class="key">"isGroup"</span>: <span class="kw">false</span>
+  }
+]
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════ GROUPS ═══════════════ -->
+
+        <!-- GET /api/groups -->
+        <div class="endpoint" id="get-groups">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge get">GET</span>
+            <span class="endpoint-path">/api/groups</span>
+            <span class="endpoint-desc">List all joined groups</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/groups
+            </div>
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+[
+  {
+    <span class="key">"id"</span>: <span class="str">"120363012345@g.us"</span>,
+    <span class="key">"name"</span>: <span class="str">"Dev Team"</span>,
+    <span class="key">"participantCount"</span>: <span class="num">12</span>,
+    <span class="key">"isReadOnly"</span>: <span class="kw">false</span>
+  }
+]
+            </div>
+          </div>
+        </div>
+
+        <!-- POST /api/join-group -->
+        <div class="endpoint" id="join-group">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge post">POST</span>
+            <span class="endpoint-path">/api/join-group</span>
+            <span class="endpoint-desc">Join a group via invite link</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Request Body</p>
+            <table class="params-table">
+              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">inviteLink</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-required">Required</span></td>
+                  <td>WhatsApp invite URL (e.g. <code>https://chat.whatsapp.com/ABC123</code>)</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> -X POST http://localhost:3000/api/join-group \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "inviteLink": "https://chat.whatsapp.com/ABC123" }'</span>
+            </div>
+
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+{ <span class="key">"success"</span>: <span class="kw">true</span>, <span class="key">"result"</span>: <span class="str">"120363012345@g.us"</span> }
+            </div>
+          </div>
+        </div>
+
+        <!-- POST /api/leave-group -->
+        <div class="endpoint" id="leave-group">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge post">POST</span>
+            <span class="endpoint-path">/api/leave-group</span>
+            <span class="endpoint-desc">Leave a group</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Request Body</p>
+            <table class="params-table">
+              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">groupId</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-required">Required</span></td>
+                  <td>The group ID to leave (e.g. <code>120363012345@g.us</code>)</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> -X POST http://localhost:3000/api/leave-group \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "groupId": "120363012345@g.us" }'</span>
+            </div>
+
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+{ <span class="key">"success"</span>: <span class="kw">true</span>, <span class="key">"result"</span>: { <span class="key">"success"</span>: <span class="kw">true</span>, <span class="key">"groupId"</span>: <span class="str">"120363012345@g.us"</span> } }
+            </div>
+          </div>
+        </div>
+
+        <!-- POST /api/add-to-group -->
+        <div class="endpoint" id="add-to-group">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge post">POST</span>
+            <span class="endpoint-path">/api/add-to-group</span>
+            <span class="endpoint-desc">Add participants to a group</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Request Body</p>
+            <table class="params-table">
+              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">groupId</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-required">Required</span></td>
+                  <td>The group ID</td>
+                </tr>
+                <tr>
+                  <td><span class="param-name">participants</span></td>
+                  <td><span class="param-type">string[]</span></td>
+                  <td><span class="param-required">Required</span></td>
+                  <td>Array of phone numbers to add</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> -X POST http://localhost:3000/api/add-to-group \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "groupId": "120363012345@g.us",
+    "participants": ["254712345678", "254798765432"]
+  }'</span>
+            </div>
+
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+{ <span class="key">"success"</span>: <span class="kw">true</span>, <span class="key">"result"</span>: { ... } }
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════ WEBHOOKS ═══════════════ -->
+
+        <!-- GET /api/hooks -->
+        <div class="endpoint" id="list-hooks">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge get">GET</span>
+            <span class="endpoint-path">/api/hooks</span>
+            <span class="endpoint-desc">List registered webhooks</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/hooks
+            </div>
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+[
+  {
+    <span class="key">"id"</span>: <span class="str">"m1abc12"</span>,
+    <span class="key">"url"</span>: <span class="str">"https://example.com/webhook"</span>,
+    <span class="key">"name"</span>: <span class="str">"My App"</span>,
+    <span class="key">"createdAt"</span>: <span class="str">"2026-02-21T12:00:00.000Z"</span>
+  }
+]
+            </div>
+          </div>
+        </div>
+
+        <!-- POST /api/hooks/register -->
+        <div class="endpoint" id="register-hook">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge post">POST</span>
+            <span class="endpoint-path">/api/hooks/register</span>
+            <span class="endpoint-desc">Register a webhook URL</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Request Body</p>
+            <table class="params-table">
+              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">url</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td><span class="param-required">Required</span></td>
+                  <td>Webhook URL to receive POST requests on incoming messages</td>
+                </tr>
+                <tr>
+                  <td><span class="param-name">name</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td></td>
+                  <td>Friendly name for the webhook (defaults to the URL)</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> -X POST http://localhost:3000/api/hooks/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "url": "https://example.com/webhook", "name": "My App" }'</span>
+            </div>
+
+            <p class="endpoint-section-title">Webhook Payload</p>
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
+              When a message is received, the following JSON is POSTed to your URL:
+            </p>
+            <div class="code-block">
+{
+  <span class="key">"id"</span>: <span class="str">"false_254712345678@c.us_3EB0..."</span>,
+  <span class="key">"from"</span>: <span class="str">"254712345678@c.us"</span>,
+  <span class="key">"to"</span>: <span class="str">"254700000000@c.us"</span>,
+  <span class="key">"body"</span>: <span class="str">"Hello!"</span>,
+  <span class="key">"timestamp"</span>: <span class="str">"2026-02-21T12:00:00.000Z"</span>,
+  <span class="key">"type"</span>: <span class="str">"received"</span>,
+  <span class="key">"contactName"</span>: <span class="str">"John"</span>,
+  <span class="key">"isGroup"</span>: <span class="kw">false</span>,
+  <span class="key">"groupName"</span>: <span class="kw">null</span>
+}
+            </div>
+          </div>
+        </div>
+
+        <!-- DELETE /api/hooks/unregister -->
+        <div class="endpoint" id="unregister-hook">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge delete">DELETE</span>
+            <span class="endpoint-path">/api/hooks/unregister</span>
+            <span class="endpoint-desc">Remove a webhook</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Request Body</p>
+            <table class="params-table">
+              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><span class="param-name">id</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td></td>
+                  <td>The webhook ID (provide <code>id</code> or <code>url</code>)</td>
+                </tr>
+                <tr>
+                  <td><span class="param-name">url</span></td>
+                  <td><span class="param-type">string</span></td>
+                  <td></td>
+                  <td>The webhook URL to remove</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> -X DELETE http://localhost:3000/api/hooks/unregister \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "id": "m1abc12" }'</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════ SYSTEM ═══════════════ -->
+
+        <!-- GET /api/status -->
+        <div class="endpoint" id="get-status">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge get">GET</span>
+            <span class="endpoint-path">/api/status</span>
+            <span class="endpoint-desc">Bot connection status and QR code</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/status
+            </div>
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+{
+  <span class="key">"status"</span>: <span class="str">"ready"</span>,  <span class="cmt">// "disconnected" | "qr" | "ready"</span>
+  <span class="key">"qr"</span>: <span class="kw">null</span>,        <span class="cmt">// base64 data URL when status is "qr"</span>
+  <span class="key">"info"</span>: {
+    <span class="key">"pushname"</span>: <span class="str">"My Bot"</span>,
+    <span class="key">"phone"</span>: <span class="str">"254712345678"</span>,
+    <span class="key">"platform"</span>: <span class="str">"android"</span>
+  }
+}
+            </div>
+          </div>
+        </div>
+
+        <!-- GET /api/stats -->
+        <div class="endpoint" id="get-stats">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge get">GET</span>
+            <span class="endpoint-path">/api/stats</span>
+            <span class="endpoint-desc">Dashboard statistics</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/stats
+            </div>
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+{
+  <span class="key">"messagesSent"</span>: <span class="num">42</span>,
+  <span class="key">"messagesReceived"</span>: <span class="num">128</span>,
+  <span class="key">"groupsJoined"</span>: <span class="num">3</span>,
+  <span class="key">"groupsLeft"</span>: <span class="num">1</span>,
+  <span class="key">"webhookCount"</span>: <span class="num">2</span>
+}
+            </div>
+          </div>
+        </div>
+
+        <!-- GET /api/tunnel -->
+        <div class="endpoint" id="get-tunnel">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge get">GET</span>
+            <span class="endpoint-path">/api/tunnel</span>
+            <span class="endpoint-desc">Cloudflare tunnel public URL</span>
+            <span class="endpoint-chevron">▶</span>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-section-title">Example Request</p>
+            <div class="code-block">
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/tunnel
+            </div>
+            <p class="endpoint-section-title">Response</p>
+            <div class="code-block">
+{ <span class="key">"url"</span>: <span class="str">"https://your-tunnel-id.trycloudflare.com"</span> }
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function toggleEndpoint(header) {
+      header.closest('.endpoint').classList.toggle('open');
+    }
+
+    function copyCode(btn) {
+      const block = btn.closest('.code-block');
+      const code = block.textContent.replace('Copy', '').trim();
+      navigator.clipboard.writeText(code);
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    }
+
+    // Highlight active sidebar link on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+          const link = document.querySelector(`.sidebar-nav a[href="#${entry.target.id}"]`);
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-100px 0px -70% 0px' });
+
+    document.querySelectorAll('.endpoint, .docs-hero').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# WhatsApp session data
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Data & config (contains sensitive tokens)
+data.json
+cloudflare-config.json
+
+# Cloudflare binary
+node_modules/cloudflared/bin/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Lock files (optional — remove if you want to track bun.lock)
+# bun.lockb

@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify project files
+        run: |
+          echo "📁 Checking project structure..."
+          test -f index.js        && echo "  ✅ index.js"
+          test -f wa-client.js    && echo "  ✅ wa-client.js"
+          test -f db.js           && echo "  ✅ db.js"
+          test -f routes/api.js   && echo "  ✅ routes/api.js"
+          test -f routes/hooks.js && echo "  ✅ routes/hooks.js"
+          test -f public/index.html && echo "  ✅ public/index.html"
+          test -f public/docs.html  && echo "  ✅ public/docs.html"
+          test -f public/style.css  && echo "  ✅ public/style.css"
+          test -f public/app.js     && echo "  ✅ public/app.js"
+
+      - name: Check syntax (Bun)
+        run: |
+          echo "🔍 Checking JavaScript syntax..."
+          bun build index.js --outdir /tmp/build --target node 2>&1
+          echo "  ✅ No syntax errors"
+
+      - name: Validate package.json
+        run: |
+          echo "📦 Checking package.json..."
+          node -e "
+            const pkg = require('./package.json');
+            const required = ['name', 'version', 'main', 'scripts'];
+            required.forEach(k => {
+              if (!pkg[k]) throw new Error('Missing: ' + k);
+              console.log('  ✅ ' + k + ': ' + (typeof pkg[k] === 'object' ? JSON.stringify(pkg[k]) : pkg[k]));
+            });
+          "
