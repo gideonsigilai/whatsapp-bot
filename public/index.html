@@ -23,23 +23,8 @@
           <h1>WA Bot Server</h1>
         </div>
         <div class="header-right">
-        <a href="/docs.html" class="btn btn-secondary btn-sm" style="text-decoration:none;">📖 API Docs</a>
+          <a href="/docs.html" class="btn btn-secondary btn-sm" style="text-decoration:none;">📖 API Docs</a>
           <button id="apiBaseEditBtn" class="btn btn-secondary btn-sm" title="Configure backend server URL">⚙️ Server URL</button>
-          <div class="tunnel-control">
-            <span class="tunnel-label">☁️ Tunnel</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="tunnelToggle" onchange="toggleTunnel()" />
-              <span class="toggle-slider"></span>
-            </label>
-            <span
-              class="tunnel-url"
-              id="tunnelUrl"
-              title="Click to copy"
-              onclick="copyTunnel()"
-              style="display:none;"
-            ></span>
-            <span class="tunnel-status" id="tunnelStatus"></span>
-          </div>
           <div class="status-badge disconnected" id="statusBadge">
             <span class="status-dot"></span>
             <span id="statusText">Disconnected</span>
