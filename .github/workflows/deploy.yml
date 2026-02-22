@@ -33,7 +33,7 @@ jobs:
 
       - name: Verify dashboard assets
         run: |
-          echo "📁 Verifying public/ assets..."
+          echo "📁 Verifying public/ assets... "
           test -f public/index.html && echo "  ✅ index.html"
           test -f public/docs.html  && echo "  ✅ docs.html"
           test -f public/style.css  && echo "  ✅ style.css"
