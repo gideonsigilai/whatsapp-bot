@@ -47,7 +47,6 @@ jobs:
         run: |
           echo "🏗️  Creating project if it doesn't exist..."
           wrangler pages project create wa-bot-dashboard \
-            --account-id=${{ secrets.CLOUDFLARE_ACCOUNT_ID }} \
             --production-branch=main \
             || echo "  ℹ️ Project already exists, continuing..."
 
@@ -58,7 +57,6 @@ jobs:
         run: |
           wrangler pages deploy public \
             --project-name=wa-bot-dashboard \
-            --account-id=${{ secrets.CLOUDFLARE_ACCOUNT_ID }} \
             --commit-dirty=true
 
       - name: Deployment summary
