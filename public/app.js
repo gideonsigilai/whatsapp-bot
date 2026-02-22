@@ -397,7 +397,7 @@ function escHtml(str) {
 document.addEventListener('DOMContentLoaded', () => {
   // Show config banner if not on localhost and no API base saved
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-  const hasSavedBase = !!getApiBase();
+  const hasSavedBase = !!localStorage.getItem('wa_api_base');
 
   if (!isLocal && !hasSavedBase) {
     showApiConfigBanner();
