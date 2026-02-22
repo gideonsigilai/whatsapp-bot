@@ -394,14 +394,20 @@ function escHtml(str) {
 }
 
 // ── Init ──
+function startPolling() {
+  pollStatus();
+  pollStats();
+  refreshMessages();
+  refreshHooks();
+  setInterval(pollStatus, 3000);
+  setInterval(pollStats, 5000);
+  setInterval(refreshMessages, 5000);
+  setInterval(refreshHooks, 15000);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Show config banner if not on localhost and no API base saved
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   const hasSavedBase = !!localStorage.getItem('wa_api_base');
-
-  if (!isLocal && !hasSavedBase) {
-    showApiConfigBanner();
-  }
 
   document.getElementById('apiBaseForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -410,29 +416,25 @@ document.addEventListener('DOMContentLoaded', () => {
     setApiBase(val);
     document.getElementById('apiConfigBanner').style.display = 'none';
     toast('Server URL saved!', 'success');
-    pollStatus(); pollStats(); refreshMessages(); refreshHooks();
+    startPolling();
   });
 
   document.getElementById('apiBaseEditBtn').addEventListener('click', () => {
-    document.getElementById('apiBaseInput').value = getApiBase();
+    document.getElementById('apiBaseInput').value = localStorage.getItem('wa_api_base') || '';
     showApiConfigBanner();
   });
 
-  // Initial load
-  pollStatus();
-  pollStats();
-  refreshMessages();
-  refreshHooks();
-
-  // Continuous polling
-  setInterval(pollStatus, 3000);
-  setInterval(pollStats, 5000);
-  setInterval(refreshMessages, 5000);
-  setInterval(refreshHooks, 15000);
+  if (!isLocal && !hasSavedBase) {
+    // Show banner and wait — don't poll until URL is saved
+    showApiConfigBanner();
+  } else {
+    // localhost or already configured — start immediately
+    startPolling();
+  }
 });
 
 function showApiConfigBanner() {
   const banner = document.getElementById('apiConfigBanner');
   banner.style.display = 'flex';
-  document.getElementById('apiBaseInput').value = getApiBase();
+  document.getElementById('apiBaseInput').value = localStorage.getItem('wa_api_base') || '';
 }
