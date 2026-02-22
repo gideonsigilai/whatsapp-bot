@@ -1,7 +1,19 @@
+// ── API Base URL Config ──
+function getApiBase() {
+  return localStorage.getItem('wa_api_base') || '';
+}
+
+function setApiBase(url) {
+  const clean = url.replace(/\/$/, '');
+  localStorage.setItem('wa_api_base', clean);
+  return clean;
+}
+
 // ── API Helper ──
 async function api(endpoint, options = {}) {
   try {
-    const res = await fetch(`/api${endpoint}`, {
+    const base = getApiBase();
+    const res = await fetch(`${base}/api${endpoint}`, {
       headers: { 'Content-Type': 'application/json' },
       ...options,
     });
@@ -453,6 +465,29 @@ function escHtml(str) {
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
+  // Show config banner if not on localhost and no API base saved
+  const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const hasSavedBase = !!getApiBase();
+
+  if (!isLocal && !hasSavedBase) {
+    showApiConfigBanner();
+  }
+
+  document.getElementById('apiBaseForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const val = document.getElementById('apiBaseInput').value.trim();
+    if (!val) return;
+    setApiBase(val);
+    document.getElementById('apiConfigBanner').style.display = 'none';
+    toast('Server URL saved!', 'success');
+    pollStatus(); pollStats(); pollTunnel(); refreshMessages(); refreshHooks();
+  });
+
+  document.getElementById('apiBaseEditBtn').addEventListener('click', () => {
+    document.getElementById('apiBaseInput').value = getApiBase();
+    showApiConfigBanner();
+  });
+
   // Initial load
   pollStatus();
   pollStats();
@@ -467,3 +502,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(pollTunnel, 10000);
   setInterval(refreshHooks, 15000);
 });
+
+function showApiConfigBanner() {
+  const banner = document.getElementById('apiConfigBanner');
+  banner.style.display = 'flex';
+  document.getElementById('apiBaseInput').value = getApiBase();
+}

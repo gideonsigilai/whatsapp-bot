@@ -24,6 +24,7 @@
         </div>
         <div class="header-right">
         <a href="/docs.html" class="btn btn-secondary btn-sm" style="text-decoration:none;">📖 API Docs</a>
+          <button id="apiBaseEditBtn" class="btn btn-secondary btn-sm" title="Configure backend server URL">⚙️ Server URL</button>
           <div class="tunnel-control">
             <span class="tunnel-label">☁️ Tunnel</span>
             <label class="toggle-switch">
@@ -50,6 +51,19 @@
         </div>
       </div>
     </header>
+
+    <!-- API Config Banner -->
+    <div id="apiConfigBanner" style="display:none; background: linear-gradient(135deg,#1a1a2e,#16213e); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 16px 24px; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <span style="font-size:1.2em;">⚙️</span>
+      <div style="flex:1; min-width:200px;">
+        <strong style="color:#e2e8f0;">Configure Backend Server URL</strong>
+        <div style="color:#94a3b8; font-size:0.85em;">Enter your server's Cloudflare Tunnel URL or local address</div>
+      </div>
+      <form id="apiBaseForm" style="display:flex; gap:8px; flex:2; min-width:280px;">
+        <input id="apiBaseInput" class="form-control" type="url" placeholder="https://your-tunnel.trycloudflare.com" style="flex:1;" required />
+        <button type="submit" class="btn btn-primary">Save</button>
+      </form>
+    </div>
 
     <!-- QR Overlay -->
     <div class="qr-overlay" id="qrOverlay">
