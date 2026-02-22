@@ -14,17 +14,13 @@ jobs:
     name: Deploy Dashboard → Cloudflare Pages
     runs-on: ubuntu-latest
 
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
 
       - name: Verify dashboard assets
         run: |
@@ -34,12 +30,14 @@ jobs:
           test -f public/style.css  && echo "  ✅ style.css"
           test -f public/app.js     && echo "  ✅ app.js"
 
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy public --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT }} --commit-dirty=true
+        run: |
+          wrangler pages deploy public \
+            --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT }} \
+            --commit-dirty=true
 
       - name: Deployment summary
         run: |
