@@ -22,6 +22,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate secrets
+        run: |
+          echo "🔐 Checking required secrets..."
+          [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}"    ] && echo "  ✅ CLOUDFLARE_API_TOKEN is set"    || echo "  ❌ CLOUDFLARE_API_TOKEN is MISSING"
+          [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"   ] && echo "  ✅ CLOUDFLARE_ACCOUNT_ID is set"   || echo "  ❌ CLOUDFLARE_ACCOUNT_ID is MISSING"
+          [ -n "${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" ] && echo "  ✅ CLOUDFLARE_PAGES_PROJECT is set" || echo "  ❌ CLOUDFLARE_PAGES_PROJECT is MISSING"
+          # Fail if token is missing
+          [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] || (echo ""; echo "💡 Add CLOUDFLARE_API_TOKEN in: GitHub repo → Settings → Secrets and variables → Actions" && exit 1)
+
       - name: Verify dashboard assets
         run: |
           echo "📁 Verifying public/ assets..."
@@ -34,6 +43,9 @@ jobs:
         run: npm install -g wrangler
 
       - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           wrangler pages deploy public \
             --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT }} \
