@@ -1,6 +1,6 @@
 // ── API Base URL Config ──
 function getApiBase() {
-  return localStorage.getItem('wa_api_base') || '';
+  return localStorage.getItem('wa_api_base') || window.location.origin;
 }
 
 function setApiBase(url) {

@@ -917,6 +917,21 @@
     }, { rootMargin: '-100px 0px -70% 0px' });
 
     document.querySelectorAll('.endpoint, .docs-hero').forEach(el => observer.observe(el));
+
+    // Replace all localhost:3000 references with the current server origin
+    document.addEventListener('DOMContentLoaded', () => {
+      const origin = localStorage.getItem('wa_api_base') || window.location.origin;
+      function replaceInNode(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          if (node.textContent.includes('http://localhost:3000')) {
+            node.textContent = node.textContent.replaceAll('http://localhost:3000', origin);
+          }
+        } else {
+          node.childNodes.forEach(replaceInNode);
+        }
+      }
+      replaceInNode(document.body);
+    });
   </script>
 </body>
 </html>
