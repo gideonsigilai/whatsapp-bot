@@ -6,9 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+# The deploy.yml workflow runs after this and handles Cloudflare Pages deployment.
+
 jobs:
   build:
-    name: Build & Lint
+    name: Validate & Lint
     runs-on: ubuntu-latest
 
     steps:
