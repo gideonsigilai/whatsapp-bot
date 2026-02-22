@@ -24,12 +24,10 @@ jobs:
 
       - name: Validate secrets
         run: |
-          echo "🔐 Checking required secrets... "
-          [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}"    ] && echo "  ✅ CLOUDFLARE_API_TOKEN is set"    || echo "  ❌ CLOUDFLARE_API_TOKEN is MISSING"
-          [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"   ] && echo "  ✅ CLOUDFLARE_ACCOUNT_ID is set"   || echo "  ❌ CLOUDFLARE_ACCOUNT_ID is MISSING"
-          [ -n "${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" ] && echo "  ✅ CLOUDFLARE_PAGES_PROJECT is set" || echo "  ❌ CLOUDFLARE_PAGES_PROJECT is MISSING"
-          # Fail if token - is missing
-          [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] || (echo ""; echo "💡 Add CLOUDFLARE_API_TOKEN in: GitHub repo → Settings → Secrets and variables → Actions" && exit 1)
+          echo "🔐 Checking required secrets..."
+          [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}"  ] && echo "  ✅ CLOUDFLARE_API_TOKEN is set"  || (echo "  ❌ CLOUDFLARE_API_TOKEN is MISSING" && exit 1)
+          [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ] && echo "  ✅ CLOUDFLARE_ACCOUNT_ID is set" || (echo "  ❌ CLOUDFLARE_ACCOUNT_ID is MISSING" && exit 1)
+          echo "  ℹ️  Pages project: wa-bot-dashboard"
 
       - name: Verify dashboard assets
         run: |
@@ -48,13 +46,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           wrangler pages deploy public \
-            --project-name=${{ secrets.CLOUDFLARE_PAGES_PROJECT }} \
+            --project-name=wa-bot-dashboard \
             --commit-dirty=true
 
       - name: Deployment summary
         run: |
           echo ""
           echo "✅ Dashboard deployed to Cloudflare Pages!"
-          echo "   Project: ${{ secrets.CLOUDFLARE_PAGES_PROJECT }}"
+          echo "   Project: wa-bot-dashboard"
           echo "   Branch:  ${{ github.ref_name }}"
           echo "   Commit:  ${{ github.sha }}"
