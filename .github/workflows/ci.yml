@@ -36,11 +36,12 @@ jobs:
           test -f public/style.css  && echo "  ✅ public/style.css"
           test -f public/app.js     && echo "  ✅ public/app.js"
 
-      - name: Check syntax (Bun)
+      - name: Check syntax
         run: |
           echo "🔍 Checking JavaScript syntax..."
-          bun build index.js --outdir /tmp/build --target node 2>&1
-          echo "  ✅ No syntax errors"
+          for f in index.js wa-client.js db.js routes/api.js routes/hooks.js; do
+            node --check "$f" && echo "  ✅ $f"
+          done
 
       - name: Validate package.json
         run: |

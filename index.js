@@ -21,10 +21,37 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', apiRoutes);
 app.use('/api/hooks', hookRoutes);
 
-// Tunnel URL endpoint
+// ── Tunnel State ──
 let tunnelUrl = null;
+let tunnelProcess = null;
+let tunnelStarting = false;
+
 app.get('/api/tunnel', (req, res) => {
-  res.json({ url: tunnelUrl });
+  const config = db.get('config') || {};
+  res.json({
+    url: tunnelUrl,
+    enabled: !!config.tunnelEnabled,
+    starting: tunnelStarting,
+  });
+});
+
+app.post('/api/tunnel/toggle', async (req, res) => {
+  const config = db.get('config') || {};
+  const enable = !config.tunnelEnabled;
+
+  // Persist the new state
+  config.tunnelEnabled = enable;
+  db.set('config', config);
+
+  if (enable) {
+    if (!tunnelProcess && !tunnelStarting) {
+      startTunnel();
+    }
+    res.json({ success: true, enabled: true, message: 'Tunnel starting...' });
+  } else {
+    stopTunnel();
+    res.json({ success: true, enabled: false, message: 'Tunnel stopped' });
+  }
 });
 
 // Start server
@@ -37,68 +64,86 @@ app.listen(PORT, () => {
     console.error('⚠️  WhatsApp init failed:', err.message);
   });
 
-  // Start Cloudflare Tunnel
-  startTunnel();
+  // Only start tunnel if enabled in config
+  const config = db.get('config') || {};
+  if (config.tunnelEnabled) {
+    startTunnel();
+  } else {
+    console.log('☁️  Cloudflare Tunnel is disabled. Enable via the dashboard toggle.\n');
+  }
 });
 
+async function ensureBinary() {
+  const { install } = require('cloudflared/lib/install');
+  const { bin } = require('cloudflared/lib/constants');
+  if (!fs.existsSync(bin)) {
+    console.log('☁️  Downloading cloudflared binary...');
+    await install(bin);
+    console.log('☁️  cloudflared installed.');
+  }
+}
+
 async function startTunnel() {
+  if (tunnelProcess || tunnelStarting) return;
+  tunnelStarting = true;
+
   try {
     const { Tunnel } = require('cloudflared/lib/tunnel');
-    const { install } = require('cloudflared/lib/install');
-    const { bin } = require('cloudflared/lib/constants');
-
-    // Auto-install cloudflared binary if missing
-    if (!fs.existsSync(bin)) {
-      console.log('☁️  Downloading cloudflared binary...');
-      await install(bin);
-      console.log('☁️  cloudflared installed.');
-    }
+    await ensureBinary();
 
     // Check if named tunnel mode is requested
     const useNamed = process.argv.includes('--tunnel') &&
       process.argv[process.argv.indexOf('--tunnel') + 1] === 'named';
 
-    let tunnel;
-
     if (useNamed) {
-      // Use named tunnel from cloudflare-config.json
       const cfConfigPath = path.join(__dirname, 'cloudflare-config.json');
       if (!fs.existsSync(cfConfigPath)) {
         console.log('⚠️  No cloudflare-config.json found. Run: bun run setup:cloudflare');
         console.log('   Falling back to quick tunnel...\n');
-        tunnel = Tunnel.quick(`http://localhost:${PORT}`);
+        tunnelProcess = Tunnel.quick(`http://localhost:${PORT}`);
       } else {
         const cfConfig = JSON.parse(fs.readFileSync(cfConfigPath, 'utf-8'));
         console.log(`☁️  Starting named tunnel for ${cfConfig.domain}...`);
-        tunnel = Tunnel.withToken(cfConfig.tunnelToken);
+        tunnelProcess = Tunnel.withToken(cfConfig.tunnelToken);
         tunnelUrl = `https://${cfConfig.domain}`;
         console.log(`\n🌍 Domain:  https://${cfConfig.domain}\n`);
       }
     } else {
-      // Quick tunnel (default)
       console.log('☁️  Starting Cloudflare Quick Tunnel...');
-      tunnel = Tunnel.quick(`http://localhost:${PORT}`);
+      tunnelProcess = Tunnel.quick(`http://localhost:${PORT}`);
     }
 
-    tunnel.on('url', (url) => {
+    tunnelProcess.on('url', (url) => {
       if (!tunnelUrl) {
         tunnelUrl = url;
         console.log(`\n🌍 Tunnel URL:  ${url}\n`);
       }
     });
 
-    tunnel.on('error', (err) => {
+    tunnelProcess.on('error', (err) => {
       console.error('☁️  Tunnel error:', err.message);
     });
 
-    // Graceful shutdown
-    process.on('SIGINT', () => {
-      console.log('\n🛑 Shutting down...');
-      tunnel.stop();
-      process.exit(0);
-    });
+    tunnelStarting = false;
   } catch (err) {
+    tunnelStarting = false;
     console.log('⚠️  Cloudflare Tunnel not available:', err.message);
     console.log('   The server is still accessible locally.\n');
   }
 }
+
+function stopTunnel() {
+  if (tunnelProcess) {
+    try { tunnelProcess.stop(); } catch {}
+    tunnelProcess = null;
+    tunnelUrl = null;
+    console.log('☁️  Tunnel stopped.');
+  }
+}
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n🛑 Shutting down...');
+  stopTunnel();
+  process.exit(0);
+});

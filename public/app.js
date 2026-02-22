@@ -81,25 +81,72 @@ async function pollStats() {
   }
 }
 
-// ── Tunnel URL ──
+// ── Tunnel Toggle ──
+let tunnelPolling = false;
+
 async function pollTunnel() {
   try {
     const data = await api('/tunnel');
-    const el = document.getElementById('tunnelUrl');
+    const toggle = document.getElementById('tunnelToggle');
+    const urlEl = document.getElementById('tunnelUrl');
+    const statusEl = document.getElementById('tunnelStatus');
+
+    // Sync toggle with server state (only if user isn't mid-click)
+    if (!tunnelPolling) {
+      toggle.checked = data.enabled;
+    }
+
     if (data.url) {
-      el.textContent = data.url;
-      el.title = 'Click to copy: ' + data.url;
+      urlEl.textContent = data.url;
+      urlEl.title = 'Click to copy: ' + data.url;
+      urlEl.style.display = '';
+      statusEl.textContent = '';
+      statusEl.className = 'tunnel-status';
+    } else if (data.enabled && data.starting) {
+      urlEl.style.display = 'none';
+      statusEl.textContent = 'Starting...';
+      statusEl.className = 'tunnel-status starting';
+    } else if (data.enabled) {
+      urlEl.style.display = 'none';
+      statusEl.textContent = 'Connecting...';
+      statusEl.className = 'tunnel-status starting';
     } else {
-      el.textContent = 'No tunnel active';
+      urlEl.style.display = 'none';
+      statusEl.textContent = '';
+      statusEl.className = 'tunnel-status';
     }
   } catch (err) {
     // ignore
   }
 }
 
+async function toggleTunnel() {
+  tunnelPolling = true;
+  const toggle = document.getElementById('tunnelToggle');
+  const statusEl = document.getElementById('tunnelStatus');
+
+  try {
+    const data = await api('/tunnel/toggle', { method: 'POST' });
+    if (data.enabled) {
+      toast('Tunnel starting...', 'info');
+      statusEl.textContent = 'Starting...';
+      statusEl.className = 'tunnel-status starting';
+    } else {
+      toast('Tunnel stopped', 'success');
+      document.getElementById('tunnelUrl').style.display = 'none';
+      statusEl.textContent = '';
+    }
+  } catch (err) {
+    toast('Failed to toggle tunnel: ' + err.message, 'error');
+    toggle.checked = !toggle.checked;
+  }
+
+  setTimeout(() => { tunnelPolling = false; }, 1000);
+}
+
 function copyTunnel() {
   const el = document.getElementById('tunnelUrl');
-  if (el.textContent && el.textContent !== 'No tunnel active') {
+  if (el.textContent && el.style.display !== 'none') {
     navigator.clipboard.writeText(el.textContent);
     toast('Tunnel URL copied!', 'success');
   }

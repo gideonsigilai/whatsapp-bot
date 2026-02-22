@@ -7,7 +7,7 @@ const DEFAULT_DATA = {
   config: {
     botName: 'WA Bot Server',
     port: 3000,
-    tunnelEnabled: true,
+    tunnelEnabled: false,
   },
   messages: [],
   groups: [],
