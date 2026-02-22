@@ -44,6 +44,14 @@ function getStatus() {
 }
 
 async function initialize() {
+  if (client) {
+    try { await client.destroy(); } catch {}
+    client = null;
+  }
+
+  connectionStatus = 'initializing';
+  qrCodeData = null;
+  clientInfo = null;
   client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
@@ -242,8 +250,30 @@ async function addToGroup(groupId, participants) {
   return result;
 }
 
+async function disconnect() {
+  if (!client) throw new Error('No active WhatsApp session');
+  connectionStatus = 'disconnected';
+  qrCodeData = null;
+  clientInfo = null;
+  try {
+    await client.logout();
+  } catch {}
+  try {
+    await client.destroy();
+  } catch {}
+  client = null;
+  console.log('🔌 WhatsApp disconnected by user');
+}
+
+async function reconnect() {
+  console.log('🔄 Reconnecting WhatsApp...');
+  await initialize();
+}
+
 module.exports = {
   initialize,
+  disconnect,
+  reconnect,
   getStatus,
   sendMessage,
   sendGroupMessage,

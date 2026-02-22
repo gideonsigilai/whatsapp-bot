@@ -43,6 +43,10 @@
             <span class="status-dot"></span>
             <span id="statusText">Disconnected</span>
           </div>
+          <div id="waControls" style="display:flex;gap:8px;">
+            <button id="btnDisconnect" class="btn btn-danger btn-sm" onclick="disconnectWA()" style="display:none;">🔌 Disconnect</button>
+            <button id="btnReconnect" class="btn btn-secondary btn-sm" onclick="reconnectWA()">🔄 Reconnect</button>
+          </div>
         </div>
       </div>
     </header>

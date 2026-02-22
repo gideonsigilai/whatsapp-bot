@@ -41,10 +41,15 @@ async function pollStatus() {
 
     badge.className = 'status-badge';
 
+    const btnDisconnect = document.getElementById('btnDisconnect');
+    const btnReconnect = document.getElementById('btnReconnect');
+
     if (data.status === 'ready') {
       badge.classList.add('ready');
       text.textContent = `Connected — ${data.info?.pushname || 'Bot'}`;
       overlay.classList.remove('visible');
+      btnDisconnect.style.display = '';
+      btnReconnect.style.display = 'none';
 
       if (lastStatus !== 'ready') {
         toast('WhatsApp connected!', 'success');
@@ -53,14 +58,18 @@ async function pollStatus() {
     } else if (data.status === 'qr') {
       badge.classList.add('qr');
       text.textContent = 'Scan QR Code';
+      btnDisconnect.style.display = 'none';
+      btnReconnect.style.display = '';
       if (data.qr) {
         qrImg.src = data.qr;
         overlay.classList.add('visible');
       }
     } else {
       badge.classList.add('disconnected');
-      text.textContent = 'Disconnected';
+      text.textContent = data.status === 'initializing' ? 'Connecting...' : 'Disconnected';
       overlay.classList.remove('visible');
+      btnDisconnect.style.display = 'none';
+      btnReconnect.style.display = '';
     }
 
     lastStatus = data.status;
@@ -391,6 +400,38 @@ async function removeHook(id) {
     pollStats();
   } catch (err) {
     toast(err.message, 'error');
+  }
+}
+
+// ── WhatsApp Connection Controls ──
+async function disconnectWA() {
+  if (!confirm('Disconnect WhatsApp? You will need to scan a QR code to reconnect.')) return;
+  try {
+    await api('/disconnect', { method: 'POST' });
+    toast('WhatsApp disconnected', 'success');
+    document.getElementById('btnDisconnect').style.display = 'none';
+    document.getElementById('btnReconnect').style.display = '';
+    pollStatus();
+  } catch (err) {
+    toast('Failed to disconnect: ' + err.message, 'error');
+  }
+}
+
+async function reconnectWA() {
+  try {
+    document.getElementById('btnReconnect').textContent = '⏳ Connecting...';
+    document.getElementById('btnReconnect').disabled = true;
+    await api('/reconnect', { method: 'POST' });
+    toast('Reconnecting… scan QR if prompted', 'info');
+    setTimeout(() => {
+      document.getElementById('btnReconnect').textContent = '🔄 Reconnect';
+      document.getElementById('btnReconnect').disabled = false;
+      pollStatus();
+    }, 3000);
+  } catch (err) {
+    document.getElementById('btnReconnect').textContent = '🔄 Reconnect';
+    document.getElementById('btnReconnect').disabled = false;
+    toast('Failed to reconnect: ' + err.message, 'error');
   }
 }
 

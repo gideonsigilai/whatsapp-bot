@@ -107,4 +107,25 @@ router.post('/add-to-group', async (req, res) => {
   }
 });
 
+// POST /api/disconnect — Disconnect WhatsApp session
+router.post('/disconnect', async (req, res) => {
+  try {
+    await waClient.disconnect();
+    res.json({ success: true, message: 'WhatsApp disconnected' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/reconnect — Reconnect WhatsApp (re-initialize client)
+router.post('/reconnect', async (req, res) => {
+  try {
+    // Don't await — initialize is long-running, just kick it off
+    waClient.reconnect().catch((err) => console.error('Reconnect error:', err.message));
+    res.json({ success: true, message: 'Reconnecting... scan QR if prompted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
