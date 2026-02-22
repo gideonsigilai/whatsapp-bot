@@ -24,7 +24,7 @@ jobs:
 
       - name: Validate secrets
         run: |
-          echo "🔐 Checking required secrets..."
+          echo "🔐 Checking required secrets... "
           [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}"    ] && echo "  ✅ CLOUDFLARE_API_TOKEN is set"    || echo "  ❌ CLOUDFLARE_API_TOKEN is MISSING"
           [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"   ] && echo "  ✅ CLOUDFLARE_ACCOUNT_ID is set"   || echo "  ❌ CLOUDFLARE_ACCOUNT_ID is MISSING"
           [ -n "${{ secrets.CLOUDFLARE_PAGES_PROJECT }}" ] && echo "  ✅ CLOUDFLARE_PAGES_PROJECT is set" || echo "  ❌ CLOUDFLARE_PAGES_PROJECT is MISSING"
