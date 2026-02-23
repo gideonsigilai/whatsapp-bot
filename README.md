@@ -7,7 +7,6 @@
 [![Runtime](https://img.shields.io/badge/runtime-Bun-f472b6?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh)
 [![WhatsApp](https://img.shields.io/badge/WhatsApp-25D366?style=for-the-badge&logo=whatsapp&logoColor=white)](https://web.whatsapp.com)
 [![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
-[![Cloudflare](https://img.shields.io/badge/Cloudflare_Tunnel-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
 [![License](https://img.shields.io/badge/license-ISC-blue?style=for-the-badge)](LICENSE)
 
 ---
@@ -28,7 +27,6 @@ _Send messages • Manage groups • Receive webhooks • Beautiful dashboard_
 | 📊 **Live Dashboard**      | Premium dark glassmorphism UI with live stats and message log   |
 | 📖 **API Docs**            | Built-in interactive API documentation page                     |
 | 💾 **JSON Persistence**    | Messages, stats, and webhooks saved to `data.json`              |
-| ☁️ **Cloudflare Tunnel**   | Auto-generates a public URL or use your own custom domain       |
 | 🔐 **Session Persistence** | WhatsApp session saved locally — scan QR once                   |
 
 ---
@@ -96,7 +94,6 @@ Open **http://localhost:3000** in your browser. Scan the QR code with WhatsApp t
 | ------ | ------------- | ------------------------------- |
 | `GET`  | `/api/status` | Bot connection status + QR code |
 | `GET`  | `/api/stats`  | Dashboard statistics            |
-| `GET`  | `/api/tunnel` | Cloudflare tunnel URL           |
 
 ### Example: Send a Message
 
@@ -134,40 +131,14 @@ curl -X POST http://localhost:3000/api/hooks/register \
 }
 ```
 
----
-
-## ☁️ Custom Domain with Cloudflare
-
-Set up a permanent custom domain instead of random tunnel URLs:
-
-```bash
-# Interactive setup wizard
-bun run setup:cloudflare
-
-# Start server with your custom domain
-bun run start:tunnel
-```
-
-**Requirements:**
-
-- A Cloudflare account with a domain added
-- An API Token with **Cloudflare Tunnel (Edit)** and **DNS (Edit)** permissions
-- Your Account ID (found on the Cloudflare dashboard)
-
-The script creates a named tunnel, configures ingress rules, and sets up the DNS CNAME record automatically.
-
----
-
 ## 📁 Project Structure
 
 ```
 wa-server/
-├── index.js                 # Express server + tunnel setup
+├── index.js                 # Express server
 ├── wa-client.js             # WhatsApp client wrapper
 ├── db.js                    # JSON persistence layer
-├── setup-cloudflare.js      # Cloudflare domain setup script
 ├── data.json                # Auto-generated data store
-├── cloudflare-config.json   # Auto-generated tunnel config
 ├── routes/
 │   ├── api.js               # REST API endpoints
 │   └── hooks.js             # Webhook management
@@ -182,12 +153,10 @@ wa-server/
 
 ## 🛠️ Scripts
 
-| Command                    | Description                             |
-| -------------------------- | --------------------------------------- |
-| `bun run start`            | Start the server                        |
-| `bun run dev`              | Start with hot reload                   |
-| `bun run setup:cloudflare` | Configure custom Cloudflare domain      |
-| `bun run start:tunnel`     | Start with named tunnel (custom domain) |
+| Command         | Description           |
+| --------------- | --------------------- |
+| `bun run start` | Start the server      |
+| `bun run dev`   | Start with hot reload |
 
 ---
 

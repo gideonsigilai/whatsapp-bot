@@ -111,6 +111,7 @@ async function initialize() {
     connectionStatus = 'disconnected';
     qrCodeData = null;
     clientInfo = null;
+    db.clearBotData();
     console.log('❌ WhatsApp disconnected:', reason);
   });
 
@@ -274,6 +275,7 @@ async function disconnect() {
   connectionStatus = 'disconnected';
   qrCodeData = null;
   clientInfo = null;
+  db.clearBotData();
   try {
     await client.logout();
   } catch {}

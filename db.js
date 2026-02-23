@@ -73,9 +73,18 @@ function incrementStat(statKey) {
   save(data);
 }
 
+function clearBotData() {
+  const data = load();
+  data.messages = [];
+  data.webhooks = [];
+  data.stats = { ...DEFAULT_DATA.stats };
+  // Note: we do not clear 'config'
+  save(data);
+}
+
 // Initialize on first require
 if (!fs.existsSync(DB_PATH)) {
   save(DEFAULT_DATA);
 }
 
-module.exports = { load, save, get, set, pushTo, removeFrom, incrementStat };
+module.exports = { load, save, get, set, pushTo, removeFrom, incrementStat, clearBotData };

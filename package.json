@@ -5,9 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "bun run index.js",
-    "dev": "bun --watch run index.js",
-    "setup:cloudflare": "bun run setup-cloudflare.js",
-    "start:tunnel": "bun run index.js --tunnel named"
+    "dev": "bun --watch run index.js"
   },
   "keywords": ["whatsapp", "bot", "api"],
   "author": "",
@@ -15,7 +13,6 @@
   "type": "commonjs",
   "dependencies": {
     "body-parser": "^2.2.2",
-    "cloudflared": "^0.7.1",
     "express": "^5.2.1",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",

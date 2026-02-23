@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,281 +8,370 @@
       name="description"
       content="WhatsApp Bot API Dashboard — send messages, manage groups, configure webhooks"
     />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              background: { light: "#FFFFFF", dark: "#0a0a0a" },
+              surface: { light: "#FFFFFF", dark: "#171717" },
+              border: { light: "#E5E5E5", dark: "#262626" },
+            },
+            fontFamily: { display: ["Inter", "sans-serif"] },
+            borderRadius: {
+              DEFAULT: "2px", sm: "2px", md: "4px", lg: "4px", xl: "4px", "2xl": "4px",
+            },
+          },
+        },
+      };
+    </script>
     <link rel="stylesheet" href="style.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>"
     />
   </head>
-  <body>
-    <!-- Header -->
-    <header class="header">
-      <div class="header-inner">
-        <div class="header-left">
-          <div class="header-logo">💬</div>
-          <h1>WA Bot Server</h1>
+  <body class="bg-background-light dark:bg-background-dark text-neutral-900 dark:text-neutral-200 transition-colors duration-200 min-h-screen p-4 md:p-8 font-[Inter]">
+
+    <!-- ═══ Header ═══ -->
+    <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 border-b border-border-light dark:border-border-dark pb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-10 h-10 rounded border border-neutral-900 dark:border-neutral-200 flex items-center justify-center bg-transparent">
+          <span class="material-symbols-outlined text-neutral-900 dark:text-neutral-200">smart_toy</span>
         </div>
-        <div class="header-right">
-          <a href="/docs.html" class="btn btn-secondary btn-sm" style="text-decoration:none;">📖 API Docs</a>
-          <button id="apiBaseEditBtn" class="btn btn-secondary btn-sm" title="Configure backend server URL">⚙️ Server URL</button>
-          <div class="status-badge disconnected" id="statusBadge">
-            <span class="status-dot"></span>
-            <span id="statusText">Disconnected</span>
-          </div>
-          <div id="waControls" style="display:flex;gap:8px;">
-            <button id="btnDisconnect" class="btn btn-danger btn-sm" onclick="disconnectWA()" style="display:none;">🔌 Disconnect</button>
-            <button id="btnReconnect" class="btn btn-secondary btn-sm" onclick="reconnectWA()">🔄 Reconnect</button>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white uppercase">WA Bot Server</h1>
+          <div class="flex items-center gap-2 mt-0.5">
+            <div id="statusBadge" class="flex items-center gap-1.5">
+              <span class="status-dot relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" id="statusPing"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2" id="statusDot"></span>
+              </span>
+              <span id="statusText" class="text-xs font-mono text-neutral-500 dark:text-neutral-400">Disconnected</span>
+            </div>
           </div>
         </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <a href="/docs.html" class="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium bg-transparent border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-neutral-600 dark:text-neutral-300 no-underline">
+          <span class="material-symbols-outlined text-[18px]">description</span>
+          API Docs
+        </a>
+        <button
+          id="btnDisconnect"
+          onclick="disconnectWA()"
+          style="display: none"
+          class="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium bg-transparent border border-red-300 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400"
+        >
+          <span class="material-symbols-outlined text-[18px]">power_settings_new</span>
+          Disconnect
+        </button>
+        <button
+          id="btnReconnect"
+          onclick="reconnectWA()"
+          class="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-600 hover:border-neutral-900 dark:hover:border-neutral-400 transition-colors"
+        >
+          <span class="material-symbols-outlined text-[18px]">refresh</span>
+          Reconnect
+        </button>
+        <button class="p-2 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400" onclick="toggleDarkMode()">
+          <span class="material-symbols-outlined text-[20px]" id="themeIcon">light_mode</span>
+        </button>
       </div>
     </header>
 
-    <!-- API Config Banner -->
-    <div id="apiConfigBanner" style="display:none; background: linear-gradient(135deg,#1a1a2e,#16213e); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 16px 24px; align-items: center; gap: 12px; flex-wrap: wrap;">
-      <span style="font-size:1.2em;">⚙️</span>
-      <div style="flex:1; min-width:200px;">
-        <strong style="color:#e2e8f0;">Configure Backend Server URL</strong>
-        <div style="color:#94a3b8; font-size:0.85em;">Enter your server's Cloudflare Tunnel URL or local address</div>
-      </div>
-      <form id="apiBaseForm" style="display:flex; gap:8px; flex:2; min-width:280px;">
-        <input id="apiBaseInput" class="form-control" type="url" placeholder="https://your-tunnel.trycloudflare.com" style="flex:1;" required />
-        <button type="submit" class="btn btn-primary">Save</button>
-      </form>
-    </div>
-
-    <!-- QR Overlay -->
+    <!-- ═══ QR Overlay ═══ -->
     <div class="qr-overlay" id="qrOverlay">
-      <div class="qr-card">
-        <h2>📱 Scan QR Code</h2>
-        <p>
-          Open WhatsApp on your phone → Settings → Linked Devices → Link a
-          Device
-        </p>
-        <img id="qrImage" src="" alt="QR Code" />
+      <div class="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300" id="qrBackdrop">
+        <div class="bg-white dark:bg-neutral-900 border border-border-light dark:border-border-dark rounded p-12 text-center shadow-2xl relative max-w-sm w-full mx-4 qr-card-anim">
+          <button class="absolute top-4 right-4 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors" onclick="closeQrOverlay()">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          <h2 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">Scan QR Code</h2>
+          <p class="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
+            Open WhatsApp → Settings → Linked Devices → Link a Device
+          </p>
+          <img id="qrImage" src="" alt="QR Code" class="w-64 h-64 rounded bg-white p-3 mx-auto" />
+        </div>
       </div>
     </div>
 
-    <!-- Main Content -->
-    <main class="main">
-      <!-- Stats Grid -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Messages Sent</div>
-          <div class="stat-value" id="statSent">0</div>
+    <!-- ═══ Stats Grid ═══ -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+      <div class="p-5 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <p class="text-[11px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-2">Sent</p>
+            <h3 class="text-3xl font-light text-neutral-900 dark:text-white tracking-tight" id="statSent">0</h3>
+          </div>
+          <span class="material-symbols-outlined text-neutral-400 dark:text-neutral-600">send</span>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Messages Received</div>
-          <div class="stat-value" id="statReceived">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Active Groups</div>
-          <div class="stat-value" id="statGroups">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Webhooks</div>
-          <div class="stat-value" id="statWebhooks">0</div>
+        <div class="w-full bg-neutral-100 dark:bg-neutral-800 h-px">
+          <div class="bg-neutral-900 dark:bg-neutral-400 h-px w-0 transition-all duration-500" id="barSent"></div>
         </div>
       </div>
+      <div class="p-5 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <p class="text-[11px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-2">Received</p>
+            <h3 class="text-3xl font-light text-neutral-900 dark:text-white tracking-tight" id="statReceived">0</h3>
+          </div>
+          <span class="material-symbols-outlined text-neutral-400 dark:text-neutral-600">inbox</span>
+        </div>
+        <div class="w-full bg-neutral-100 dark:bg-neutral-800 h-px">
+          <div class="bg-neutral-900 dark:bg-neutral-400 h-px w-0 transition-all duration-500" id="barReceived"></div>
+        </div>
+      </div>
+      <div class="p-5 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <p class="text-[11px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-2">Active Groups</p>
+            <h3 class="text-3xl font-light text-neutral-900 dark:text-white tracking-tight" id="statGroups">0</h3>
+          </div>
+          <span class="material-symbols-outlined text-neutral-400 dark:text-neutral-600">groups</span>
+        </div>
+        <div class="w-full bg-neutral-100 dark:bg-neutral-800 h-px">
+          <div class="bg-neutral-900 dark:bg-neutral-400 h-px w-0 transition-all duration-500" id="barGroups"></div>
+        </div>
+      </div>
+      <div class="p-5 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <p class="text-[11px] font-medium uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-2">Webhooks</p>
+            <h3 class="text-3xl font-light text-neutral-900 dark:text-white tracking-tight" id="statWebhooks">0</h3>
+          </div>
+          <span class="material-symbols-outlined text-neutral-400 dark:text-neutral-600">webhook</span>
+        </div>
+        <div class="w-full bg-neutral-100 dark:bg-neutral-800 h-px">
+          <div class="bg-neutral-900 dark:bg-neutral-400 h-px w-0 transition-all duration-500" id="barWebhooks"></div>
+        </div>
+      </div>
+    </div>
 
-      <!-- Content Grid -->
-      <div class="content-grid">
-        <!-- Left Column: Actions -->
-        <div>
-          <!-- Send Message -->
-          <div class="card" style="margin-bottom: 24px">
-            <div class="card-header">
-              <span class="card-title"
-                ><span class="icon">✉️</span> Send Message</span
-              >
-            </div>
-            <div class="card-body">
-              <div class="form-group">
-                <label>Phone Number (with country code)</label>
+    <!-- ═══ Main Content ═══ -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- ── Left Column: Actions ── -->
+      <div class="lg:col-span-4 space-y-6">
+
+        <!-- Direct Message -->
+        <div class="bg-white dark:bg-surface-dark rounded border border-border-light dark:border-border-dark">
+          <div class="flex items-center justify-between p-5 border-b border-border-light dark:border-border-dark">
+            <h2 class="text-sm font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">Direct Message</h2>
+            <span class="material-symbols-outlined text-neutral-400 text-[20px]">chat</span>
+          </div>
+          <div class="p-5 space-y-5">
+            <div>
+              <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Recipient Number</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 material-symbols-outlined text-[18px]">dialpad</span>
                 <input
-                  class="form-control"
-                  type="text"
                   id="msgNumber"
+                  class="w-full pl-10 pr-4 py-2 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white focus:border-neutral-900 dark:focus:border-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600 transition-all"
                   placeholder="e.g. 254712345678"
+                  type="text"
                 />
               </div>
-              <div class="form-group">
-                <label>Message</label>
-                <textarea
-                  class="form-control"
-                  id="msgBody"
-                  placeholder="Type your message..."
-                ></textarea>
-              </div>
-              <button class="btn btn-primary btn-block" onclick="sendMessage()">
-                <span>Send Message</span>
-              </button>
             </div>
+            <div>
+              <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Content</label>
+              <textarea
+                id="msgBody"
+                class="w-full p-3 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white focus:border-neutral-900 dark:focus:border-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600 resize-none"
+                placeholder="Type message..."
+                rows="4"
+              ></textarea>
+            </div>
+            <button class="w-full py-2.5 px-4 rounded bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 font-medium transition-colors flex items-center justify-center gap-2 text-sm" onclick="sendMessage()">
+              <span class="material-symbols-outlined text-[18px]">send</span>
+              Send
+            </button>
           </div>
+        </div>
 
-          <!-- Send Group Message -->
-          <div class="card" style="margin-bottom: 24px">
-            <div class="card-header">
-              <span class="card-title"
-                ><span class="icon">👥</span> Send Group Message</span
-              >
-            </div>
-            <div class="card-body">
-              <div class="form-group">
-                <label>Select Group</label>
-                <select class="form-control" id="groupSelect">
-                  <option value="">Loading groups...</option>
+        <!-- Group Broadcast -->
+        <div class="bg-white dark:bg-surface-dark rounded border border-border-light dark:border-border-dark">
+          <div class="flex items-center justify-between p-5 border-b border-border-light dark:border-border-dark">
+            <h2 class="text-sm font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">Group Broadcast</h2>
+            <span class="material-symbols-outlined text-neutral-400 text-[20px]">campaign</span>
+          </div>
+          <div class="p-5 space-y-5">
+            <div>
+              <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Target Group</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 material-symbols-outlined text-[18px]">group_work</span>
+                <select id="groupSelect" class="w-full pl-10 pr-10 py-2 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white focus:border-neutral-900 dark:focus:border-white text-sm appearance-none cursor-pointer">
+                  <option value="">— Select a group —</option>
                 </select>
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 material-symbols-outlined text-[18px] pointer-events-none">expand_more</span>
               </div>
-              <div class="form-group">
-                <label>Message</label>
-                <textarea
-                  class="form-control"
-                  id="groupMsgBody"
-                  placeholder="Type your message..."
-                ></textarea>
-              </div>
-              <button
-                class="btn btn-primary btn-block"
-                onclick="sendGroupMessage()"
-              >
-                <span>Send to Group</span>
-              </button>
             </div>
+            <div>
+              <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Message</label>
+              <textarea
+                id="groupMsgBody"
+                class="w-full p-3 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white focus:border-neutral-900 dark:focus:border-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600 resize-none"
+                placeholder="Type message..."
+                rows="3"
+              ></textarea>
+            </div>
+            <button class="w-full py-2.5 px-4 rounded border border-neutral-900 dark:border-white text-neutral-900 dark:text-white hover:bg-neutral-50 dark:hover:bg-neutral-800 font-medium transition-colors flex items-center justify-center gap-2 text-sm" onclick="sendGroupMessage()">
+              <span class="material-symbols-outlined text-[18px]">campaign</span>
+              Broadcast
+            </button>
           </div>
+        </div>
 
-          <!-- Group Actions -->
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title"
-                ><span class="icon">🔗</span> Group Actions</span
-              >
+        <!-- Group Actions -->
+        <div class="bg-white dark:bg-surface-dark rounded border border-border-light dark:border-border-dark">
+          <div class="flex items-center justify-between p-5 border-b border-border-light dark:border-border-dark">
+            <h2 class="text-sm font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">Group Actions</h2>
+            <span class="material-symbols-outlined text-neutral-400 text-[20px]">link</span>
+          </div>
+          <div class="p-5">
+            <!-- Tab bar -->
+            <div class="flex border-b border-border-light dark:border-border-dark mb-5">
+              <button class="tab-btn-new active px-4 py-2 text-sm font-medium border-b-2 border-neutral-900 dark:border-white text-neutral-900 dark:text-white transition-colors" onclick="switchTab(this, 'tabJoin')">Join</button>
+              <button class="tab-btn-new px-4 py-2 text-sm font-medium border-b-2 border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onclick="switchTab(this, 'tabAdd')">Add Members</button>
             </div>
-            <div class="card-body">
-              <div class="tab-bar">
-                <button
-                  class="tab-btn active"
-                  onclick="switchTab(this, 'tabJoin')"
-                >
+            <!-- Join tab -->
+            <div class="tab-content active" id="tabJoin">
+              <div class="space-y-5">
+                <div>
+                  <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Invite Link</label>
+                  <input
+                    id="inviteLink"
+                    class="w-full px-3 py-2 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white focus:border-neutral-900 dark:focus:border-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600"
+                    placeholder="https://chat.whatsapp.com/..."
+                    type="text"
+                  />
+                </div>
+                <button class="w-full py-2.5 px-4 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-900 dark:hover:border-white hover:text-neutral-900 dark:hover:text-white font-medium transition-colors flex items-center justify-center gap-2 text-sm" onclick="joinGroup()">
+                  <span class="material-symbols-outlined text-[18px]">login</span>
                   Join
                 </button>
-                <button class="tab-btn" onclick="switchTab(this, 'tabAdd')">
-                  Add Members
-                </button>
               </div>
-              <div
-                class="tab-content active"
-                id="tabJoin"
-                style="padding-top: 16px"
-              >
-                <div class="form-group">
-                  <label>Invite Link</label>
-                  <input
-                    class="form-control"
-                    type="text"
-                    id="inviteLink"
-                    placeholder="https://chat.whatsapp.com/..."
-                  />
+            </div>
+            <!-- Add Members tab -->
+            <div class="tab-content" id="tabAdd" style="display:none">
+              <div class="space-y-5">
+                <div>
+                  <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Select Group</label>
+                  <div class="relative">
+                    <select id="addGroupSelect" class="w-full pl-3 pr-10 py-2 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm appearance-none cursor-pointer">
+                      <option value="">— Select a group —</option>
+                    </select>
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 material-symbols-outlined text-[18px] pointer-events-none">expand_more</span>
+                  </div>
                 </div>
-                <button class="btn btn-primary btn-block" onclick="joinGroup()">
-                  Join Group
-                </button>
-              </div>
-              <div class="tab-content" id="tabAdd" style="padding-top: 16px">
-                <div class="form-group">
-                  <label>Select Group</label>
-                  <select class="form-control" id="addGroupSelect">
-                    <option value="">Loading groups...</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Phone Numbers (comma-separated)</label>
+                <div>
+                  <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Phone Numbers (comma-separated)</label>
                   <input
-                    class="form-control"
-                    type="text"
                     id="addParticipants"
+                    class="w-full px-3 py-2 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600"
                     placeholder="254712345678, 254798765432"
+                    type="text"
                   />
                 </div>
-                <button
-                  class="btn btn-primary btn-block"
-                  onclick="addToGroup()"
-                >
+                <button class="w-full py-2.5 px-4 rounded border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-900 dark:hover:border-white hover:text-neutral-900 dark:hover:text-white font-medium transition-colors flex items-center justify-center gap-2 text-sm" onclick="addToGroup()">
+                  <span class="material-symbols-outlined text-[18px]">person_add</span>
                   Add Members
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Column -->
-        <div>
-          <!-- Message Log -->
-          <div class="card" style="margin-bottom: 24px">
-            <div class="card-header">
-              <span class="card-title"
-                ><span class="icon">📋</span> Message Log</span
-              >
-              <button
-                class="btn btn-secondary btn-sm"
-                onclick="refreshMessages()"
-              >
-                Refresh
-              </button>
-            </div>
-            <div class="message-log" id="messageLog">
-              <div class="empty-state">
-                <div class="icon">💬</div>
-                <p>No messages yet</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Groups -->
-          <div class="card" style="margin-bottom: 24px">
-            <div class="card-header">
-              <span class="card-title"
-                ><span class="icon">👥</span> Groups</span
-              >
-              <button
-                class="btn btn-secondary btn-sm"
-                onclick="refreshGroups()"
-              >
-                Refresh
-              </button>
-            </div>
-            <div class="group-list" id="groupList">
-              <div class="empty-state">
-                <div class="icon">👥</div>
-                <p>No groups found</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Webhooks -->
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title"
-                ><span class="icon">🔔</span> Webhooks</span
-              >
-            </div>
-            <div class="card-body">
-              <div class="inline-form" style="margin-bottom: 12px">
-                <input
-                  class="form-control"
-                  type="text"
-                  id="hookUrl"
-                  placeholder="https://your-webhook-url.com/endpoint"
-                />
-                <button class="btn btn-primary" onclick="registerHook()">
-                  Add
-                </button>
-              </div>
-              <div id="hookList"></div>
             </div>
           </div>
         </div>
       </div>
-    </main>
+
+      <!-- ── Right Column ── -->
+      <div class="lg:col-span-8 space-y-6">
+
+        <!-- System Logs (Message Log) -->
+        <div class="bg-white dark:bg-surface-dark rounded border border-border-light dark:border-border-dark flex flex-col min-h-[400px]">
+          <div class="p-5 flex justify-between items-center border-b border-border-light dark:border-border-dark">
+            <div class="flex items-center gap-3">
+              <h2 class="text-sm font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">System Logs</h2>
+            </div>
+            <div class="flex gap-2 items-center">
+              <span class="px-2 py-1 rounded bg-neutral-100 dark:bg-neutral-800 text-[10px] font-mono text-neutral-500">LIVE</span>
+              <button class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors" onclick="refreshMessages()">
+                <span class="material-symbols-outlined text-[18px]">refresh</span>
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-12 gap-4 px-6 py-3 border-b border-border-light dark:border-border-dark bg-neutral-50 dark:bg-neutral-900/50 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+            <div class="col-span-2">Time</div>
+            <div class="col-span-2">Type</div>
+            <div class="col-span-5">Contact</div>
+            <div class="col-span-3 text-right">Message</div>
+          </div>
+          <div class="flex-1 overflow-y-auto max-h-[420px]" id="messageLog">
+            <div class="flex-1 p-8 flex flex-col items-center justify-center text-center">
+              <div class="w-16 h-16 rounded-full border border-dashed border-neutral-300 dark:border-neutral-700 flex items-center justify-center mb-4">
+                <span class="material-symbols-outlined text-2xl text-neutral-400 dark:text-neutral-600">history</span>
+              </div>
+              <h3 class="text-sm font-medium text-neutral-900 dark:text-neutral-200">No logs available</h3>
+              <p class="text-xs text-neutral-500 mt-2 max-w-xs">System events and message statuses will appear here in real-time.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Groups List -->
+        <div class="bg-white dark:bg-surface-dark rounded border border-border-light dark:border-border-dark">
+          <div class="p-5 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+            <h2 class="text-sm font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">Groups</h2>
+            <button class="text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors" onclick="refreshGroups()">
+              <span class="material-symbols-outlined text-[18px]">refresh</span>
+            </button>
+          </div>
+          <div class="max-h-[300px] overflow-y-auto" id="groupList">
+            <div class="flex flex-col items-center justify-center text-center py-8">
+              <span class="material-symbols-outlined text-3xl text-neutral-300 dark:text-neutral-700 mb-2">group_off</span>
+              <h3 class="text-sm font-medium text-neutral-500 dark:text-neutral-500">No groups found</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Webhooks -->
+        <div class="bg-white dark:bg-surface-dark rounded border border-border-light dark:border-border-dark">
+          <div class="p-5 border-b border-border-light dark:border-border-dark flex justify-between items-center">
+            <h2 class="text-sm font-semibold text-neutral-900 dark:text-white uppercase tracking-wider">Webhooks</h2>
+            <span class="material-symbols-outlined text-neutral-400 text-[20px]">hub</span>
+          </div>
+          <div class="p-6">
+            <div class="flex flex-col sm:flex-row gap-3 mb-8">
+              <input
+                id="hookUrl"
+                class="flex-1 px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white focus:border-neutral-900 dark:focus:border-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600 font-mono"
+                placeholder="https://api.domain.com/webhook"
+                type="text"
+              />
+              <button class="px-6 py-2.5 rounded bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 font-medium transition-colors text-sm" onclick="registerHook()">
+                Add Endpoint
+              </button>
+            </div>
+            <div id="hookList">
+              <div class="flex flex-col items-center justify-center text-center py-8 border border-dashed border-neutral-200 dark:border-neutral-800 rounded bg-neutral-50/50 dark:bg-neutral-900/20">
+                <span class="material-symbols-outlined text-3xl text-neutral-300 dark:text-neutral-700 mb-2">cloud_off</span>
+                <h3 class="text-sm font-medium text-neutral-500 dark:text-neutral-500">No active webhooks</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ Footer ═══ -->
+    <footer class="mt-12 border-t border-border-light dark:border-border-dark pt-8 pb-8 text-center">
+      <p class="text-neutral-400 dark:text-neutral-600 text-xs uppercase tracking-widest font-medium">
+        Built with Bun + Express + whatsapp-web.js
+      </p>
+    </footer>
 
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
