@@ -270,6 +270,33 @@ async function pollStatus() {
           overlay.classList.add('visible');
         }
       }
+    } else if (data.status === 'error') {
+      dot.style.background = '#ef4444';
+      ping.style.background = '#ef4444';
+      ping.className = 'absolute inline-flex h-full w-full rounded-full opacity-0';
+      text.textContent = 'Connection Failed';
+      text.style.color = '#ef4444';
+      
+      const statusText = document.getElementById('qrStatusText');
+      if (statusText && overlay.classList.contains('visible') && !isQrDismissed) {
+        statusText.textContent = data.error || 'Initialization failed. Check logs.';
+        statusText.style.color = '#ef4444';
+        qrLoading.style.display = '';
+        qrReady.style.display = 'none';
+        const spinner = qrLoading.querySelector('.qr-spinner');
+        if (spinner) spinner.style.display = 'none';
+      } else if (lastStatus !== 'error') {
+        toast('Connection failed: ' + (data.error || 'Check server logs'), 'error');
+      }
+      
+      btnDisconnect.style.display = 'none';
+      btnReconnect.style.display = '';
+
+      if (lastStatus === 'ready') {
+        cachedGroups = [];
+        renderGroups([]);
+        populateGroupSelects([]);
+      }
     } else {
       dot.style.background = '#737373';
       ping.style.background = '#737373';
@@ -277,7 +304,22 @@ async function pollStatus() {
       const statusMsg = data.status === 'initializing' ? 'Initializing…' : 'Disconnected';
       text.textContent = statusMsg;
       text.style.color = data.status === 'initializing' ? '#f1d302' : '#737373';
-      overlay.classList.remove('visible');
+      
+      if (data.status === 'disconnected') {
+        overlay.classList.remove('visible');
+      } else if (data.status === 'initializing' && !isQrDismissed) {
+        overlay.classList.add('visible');
+        qrLoading.style.display = '';
+        qrReady.style.display = 'none';
+        const statusText = document.getElementById('qrStatusText');
+        if (statusText) {
+          statusText.textContent = 'Initializing…';
+          statusText.style.color = '#f1d302';
+        }
+        const spinner = qrLoading.querySelector('.qr-spinner');
+        if (spinner) spinner.style.display = '';
+      }
+
       btnDisconnect.style.display = 'none';
       btnReconnect.style.display = '';
 
@@ -607,9 +649,13 @@ async function reconnectWA() {
     const qrReady = document.getElementById('qrReady');
     const statusText = document.getElementById('qrStatusText');
 
+    const spinner = qrLoading.querySelector('.qr-spinner');
+    if (spinner) spinner.style.display = '';
+
     qrLoading.style.display = '';
     qrReady.style.display = 'none';
     statusText.textContent = 'Preparing…';
+    statusText.style.color = '#f1d302';
     overlay.classList.add('visible');
 
     document.getElementById('btnReconnect').innerHTML = '<span class="qr-spinner-inline"></span> Connecting…';

@@ -38,7 +38,7 @@ function findChrome() {
   }
 
   try {
-    const found = execSync('which chromium || which chromium-browser || which google-chrome', { encoding: 'utf8' }).trim().split('\n')[0];
+    const found = execSync('command -v chromium || command -v chromium-browser || command -v google-chrome || command -v chrome', { encoding: 'utf8' }).trim().split('\n')[0];
     if (found) return found;
   } catch {}
 
@@ -56,6 +56,7 @@ function getUserClient(userId) {
       qrCodeData: null,
       connectionStatus: 'disconnected',
       clientInfo: null,
+      lastError: null,
     });
   }
   return userClients.get(userId);
@@ -67,6 +68,7 @@ function getStatus(userId) {
     status: uc.connectionStatus,
     qr: uc.qrCodeData,
     info: uc.clientInfo,
+    error: uc.lastError,
   };
 }
 
@@ -81,6 +83,7 @@ async function initialize(userId) {
   uc.connectionStatus = 'initializing';
   uc.qrCodeData = null;
   uc.clientInfo = null;
+  uc.lastError = null;
 
   const client = new Client({
     authStrategy: new LocalAuth({ clientId: userId }),
@@ -167,7 +170,8 @@ async function initialize(userId) {
   try {
     await client.initialize();
   } catch (err) {
-    uc.connectionStatus = 'disconnected';
+    uc.connectionStatus = 'error';
+    uc.lastError = err.message;
     console.error(`⚠️  [${userId.slice(0, 8)}] WhatsApp client initialization failed:`, err.message);
     console.error('   The dashboard is still accessible. Fix the issue and restart.');
   }
@@ -294,6 +298,7 @@ async function disconnect(userId) {
   uc.connectionStatus = 'disconnected';
   uc.qrCodeData = null;
   uc.clientInfo = null;
+  uc.lastError = null;
   db.clearUserBotData(userId);
   try {
     await uc.client.logout();
