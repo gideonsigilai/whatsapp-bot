@@ -102,6 +102,10 @@ async function initialize(userId) {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--no-zygote',
+        '--single-process',
+        '--disable-accelerated-2d-canvas',
+        '--disable-features=site-per-process'
       ],
     },
   });
