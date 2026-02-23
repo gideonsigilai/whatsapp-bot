@@ -37,6 +37,91 @@
   </head>
   <body class="bg-background-light dark:bg-background-dark text-neutral-900 dark:text-neutral-200 transition-colors duration-200 min-h-screen p-4 md:p-8 font-[Inter]">
 
+    <!-- ═══ Auth Screen ═══ -->
+    <div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-background-light dark:bg-background-dark p-4">
+      <div class="w-full max-w-sm">
+        <!-- Logo -->
+        <div class="flex flex-col items-center mb-10">
+          <div class="w-14 h-14 rounded border border-neutral-900 dark:border-neutral-200 flex items-center justify-center mb-4">
+            <span class="material-symbols-outlined text-2xl text-neutral-900 dark:text-neutral-200">smart_toy</span>
+          </div>
+          <h1 class="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white uppercase">WA Bot Server</h1>
+          <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1 font-mono" id="authSubtitle">Sign in to continue</p>
+        </div>
+
+        <!-- Login Form -->
+        <div id="authLogin" class="space-y-5">
+          <div>
+            <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Email</label>
+            <input id="loginEmail" type="email" class="w-full px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600" placeholder="you@example.com" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Password</label>
+            <input id="loginPassword" type="password" class="w-full px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600" placeholder="••••••••" />
+          </div>
+          <button onclick="handleLogin()" class="w-full py-2.5 rounded bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-medium text-sm hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors">Sign In</button>
+          <div class="flex justify-between text-xs">
+            <button onclick="showAuthView('register')" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">Create account</button>
+            <button onclick="showAuthView('forgot')" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">Forgot password?</button>
+          </div>
+        </div>
+
+        <!-- Register Form -->
+        <div id="authRegister" class="space-y-5" style="display:none">
+          <div>
+            <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Email</label>
+            <input id="registerEmail" type="email" class="w-full px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600" placeholder="you@example.com" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Password</label>
+            <input id="registerPassword" type="password" class="w-full px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600" placeholder="Min 6 characters" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Confirm Password</label>
+            <input id="registerConfirm" type="password" class="w-full px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600" placeholder="••••••••" />
+          </div>
+          <button onclick="handleRegister()" class="w-full py-2.5 rounded bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-medium text-sm hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors">Create Account</button>
+          <div class="text-center text-xs">
+            <button onclick="showAuthView('login')" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">Already have an account? Sign in</button>
+          </div>
+        </div>
+
+        <!-- Forgot Password Form -->
+        <div id="authForgot" class="space-y-5" style="display:none">
+          <div>
+            <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Email</label>
+            <input id="forgotEmail" type="email" class="w-full px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600" placeholder="you@example.com" />
+          </div>
+          <button onclick="handleForgotPassword()" class="w-full py-2.5 rounded bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-medium text-sm hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors">Send Reset Code</button>
+          <div class="text-center text-xs">
+            <button onclick="showAuthView('login')" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">Back to sign in</button>
+          </div>
+        </div>
+
+        <!-- Reset Password Form -->
+        <div id="authReset" class="space-y-5" style="display:none">
+          <div>
+            <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">Reset Code (OTP)</label>
+            <input id="resetOtp" type="text" class="w-full px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600 font-mono tracking-widest text-center text-lg" placeholder="000000" maxlength="6" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2 uppercase tracking-wide">New Password</label>
+            <input id="resetNewPassword" type="password" class="w-full px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600" placeholder="Min 6 characters" />
+          </div>
+          <button onclick="handleResetPassword()" class="w-full py-2.5 rounded bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-medium text-sm hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors">Reset Password</button>
+          <div class="text-center text-xs">
+            <button onclick="showAuthView('login')" class="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">Back to sign in</button>
+          </div>
+        </div>
+
+        <!-- Auth error/success messages -->
+        <div id="authMessage" class="mt-4 text-center text-sm hidden"></div>
+      </div>
+    </div>
+
+    <!-- ═══ Dashboard Content (hidden until authenticated) ═══ -->
+    <div id="dashboardContent" style="display:none">
+
     <!-- ═══ Header ═══ -->
     <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 border-b border-border-light dark:border-border-dark pb-6">
       <div class="flex items-center gap-4">
@@ -57,6 +142,11 @@
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-3">
+        <span id="userEmail" class="text-xs text-neutral-500 dark:text-neutral-400 font-mono"></span>
+        <button onclick="handleLogout()" class="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium bg-transparent border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-neutral-600 dark:text-neutral-300">
+          <span class="material-symbols-outlined text-[18px]">logout</span>
+          Logout
+        </button>
         <a href="/docs.html" class="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium bg-transparent border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors text-neutral-600 dark:text-neutral-300 no-underline">
           <span class="material-symbols-outlined text-[18px]">description</span>
           API Docs
@@ -373,6 +463,9 @@
         </div>
 
       </div>
+    </div>
+
+    <!-- close dashboardContent -->
     </div>
 
     <!-- ═══ Footer ═══ -->

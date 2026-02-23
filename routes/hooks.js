@@ -4,7 +4,7 @@ const db = require('../db');
 
 // GET /api/hooks — List registered webhooks
 router.get('/', (req, res) => {
-  const webhooks = db.get('webhooks') || [];
+  const webhooks = db.getUser(req.user.id, 'webhooks') || [];
   res.json(webhooks);
 });
 
@@ -15,7 +15,7 @@ router.post('/register', (req, res) => {
     return res.status(400).json({ error: 'url is required' });
   }
 
-  const webhooks = db.get('webhooks') || [];
+  const webhooks = db.getUser(req.user.id, 'webhooks') || [];
   const exists = webhooks.find((w) => w.url === url);
   if (exists) {
     return res.status(409).json({ error: 'Webhook URL already registered' });
@@ -28,7 +28,7 @@ router.post('/register', (req, res) => {
     createdAt: new Date().toISOString(),
   };
 
-  db.pushTo('webhooks', webhook);
+  db.pushToUser(req.user.id, 'webhooks', webhook);
   res.status(201).json({ success: true, webhook });
 });
 
@@ -39,7 +39,7 @@ router.delete('/unregister', (req, res) => {
     return res.status(400).json({ error: 'id or url is required' });
   }
 
-  db.removeFrom('webhooks', (w) => (id ? w.id === id : w.url === url));
+  db.removeFromUser(req.user.id, 'webhooks', (w) => (id ? w.id === id : w.url === url));
   res.json({ success: true });
 });
 

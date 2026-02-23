@@ -8,15 +8,12 @@ const { execSync } = require('child_process');
 
 /**
  * Find system-installed Chrome/Chromium executable.
- * Priority: env PUPPETEER_EXECUTABLE_PATH > common paths > `which chromium`
  */
 function findChrome() {
-  // 1. Explicit env var (set by nixpacks.toml on Railway)
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
     return process.env.PUPPETEER_EXECUTABLE_PATH;
   }
 
-  // 2. Common static paths
   const paths = process.platform === 'win32'
     ? [
         process.env['PROGRAMFILES'] + '\\Google\\Chrome\\Application\\chrome.exe',
@@ -40,39 +37,53 @@ function findChrome() {
     try { if (fs.existsSync(p)) return p; } catch {}
   }
 
-  // 3. Dynamic lookup via `which`
   try {
     const found = execSync('which chromium || which chromium-browser || which google-chrome', { encoding: 'utf8' }).trim().split('\n')[0];
     if (found) return found;
   } catch {}
 
-  return undefined; // fall back to Puppeteer bundled Chrome
+  return undefined;
 }
 
-let client = null;
-let qrCodeData = null;
-let connectionStatus = 'disconnected'; // disconnected | qr | ready
-let clientInfo = null;
+// ── Per-user client instances ──
+// Map<userId, { client, qrCodeData, connectionStatus, clientInfo }>
+const userClients = new Map();
 
-function getStatus() {
+function getUserClient(userId) {
+  if (!userClients.has(userId)) {
+    userClients.set(userId, {
+      client: null,
+      qrCodeData: null,
+      connectionStatus: 'disconnected',
+      clientInfo: null,
+    });
+  }
+  return userClients.get(userId);
+}
+
+function getStatus(userId) {
+  const uc = getUserClient(userId);
   return {
-    status: connectionStatus,
-    qr: qrCodeData,
-    info: clientInfo,
+    status: uc.connectionStatus,
+    qr: uc.qrCodeData,
+    info: uc.clientInfo,
   };
 }
 
-async function initialize() {
-  if (client) {
-    try { await client.destroy(); } catch {}
-    client = null;
+async function initialize(userId) {
+  const uc = getUserClient(userId);
+
+  if (uc.client) {
+    try { await uc.client.destroy(); } catch {}
+    uc.client = null;
   }
 
-  connectionStatus = 'initializing';
-  qrCodeData = null;
-  clientInfo = null;
-  client = new Client({
-    authStrategy: new LocalAuth(),
+  uc.connectionStatus = 'initializing';
+  uc.qrCodeData = null;
+  uc.clientInfo = null;
+
+  const client = new Client({
+    authStrategy: new LocalAuth({ clientId: userId }),
     puppeteer: {
       headless: true,
       executablePath: findChrome(),
@@ -85,34 +96,36 @@ async function initialize() {
     },
   });
 
+  uc.client = client;
+
   client.on('qr', async (qr) => {
-    connectionStatus = 'qr';
+    uc.connectionStatus = 'qr';
     qrcode.generate(qr, { small: true });
     try {
-      qrCodeData = await QRCode.toDataURL(qr);
+      uc.qrCodeData = await QRCode.toDataURL(qr);
     } catch {
-      qrCodeData = null;
+      uc.qrCodeData = null;
     }
-    console.log('📱 Scan the QR code to connect WhatsApp');
+    console.log(`📱 [${userId.slice(0, 8)}] Scan the QR code to connect WhatsApp`);
   });
 
   client.on('ready', () => {
-    connectionStatus = 'ready';
-    qrCodeData = null;
-    clientInfo = {
+    uc.connectionStatus = 'ready';
+    uc.qrCodeData = null;
+    uc.clientInfo = {
       pushname: client.info?.pushname || 'Unknown',
       phone: client.info?.wid?.user || 'Unknown',
       platform: client.info?.platform || 'Unknown',
     };
-    console.log(`✅ WhatsApp connected as ${clientInfo.pushname} (${clientInfo.phone})`);
+    console.log(`✅ [${userId.slice(0, 8)}] WhatsApp connected as ${uc.clientInfo.pushname} (${uc.clientInfo.phone})`);
   });
 
   client.on('disconnected', (reason) => {
-    connectionStatus = 'disconnected';
-    qrCodeData = null;
-    clientInfo = null;
-    db.clearBotData();
-    console.log('❌ WhatsApp disconnected:', reason);
+    uc.connectionStatus = 'disconnected';
+    uc.qrCodeData = null;
+    uc.clientInfo = null;
+    db.clearUserBotData(userId);
+    console.log(`❌ [${userId.slice(0, 8)}] WhatsApp disconnected:`, reason);
   });
 
   client.on('message', async (msg) => {
@@ -131,11 +144,11 @@ async function initialize() {
       groupName: chat.isGroup ? chat.name : null,
     };
 
-    db.pushTo('messages', messageData);
-    db.incrementStat('messagesReceived');
+    db.pushToUser(userId, 'messages', messageData);
+    db.incrementStatUser(userId, 'messagesReceived');
 
-    // Fire webhooks
-    const webhooks = db.get('webhooks') || [];
+    // Fire webhooks for this user
+    const webhooks = db.getUser(userId, 'webhooks') || [];
     for (const hook of webhooks) {
       try {
         await fetch(hook.url, {
@@ -149,24 +162,25 @@ async function initialize() {
     }
   });
 
-  console.log('🚀 Initializing WhatsApp client...');
+  console.log(`🚀 [${userId.slice(0, 8)}] Initializing WhatsApp client...`);
 
   try {
     await client.initialize();
   } catch (err) {
-    connectionStatus = 'disconnected';
-    console.error('⚠️  WhatsApp client initialization failed:', err.message);
+    uc.connectionStatus = 'disconnected';
+    console.error(`⚠️  [${userId.slice(0, 8)}] WhatsApp client initialization failed:`, err.message);
     console.error('   The dashboard is still accessible. Fix the issue and restart.');
   }
 }
 
-async function sendMessage(number, message) {
-  if (!client || connectionStatus !== 'ready') {
+async function sendMessage(userId, number, message) {
+  const uc = getUserClient(userId);
+  if (!uc.client || uc.connectionStatus !== 'ready') {
     throw new Error('WhatsApp client is not connected');
   }
 
   const chatId = number.includes('@c.us') ? number : `${number}@c.us`;
-  const result = await client.sendMessage(chatId, message);
+  const result = await uc.client.sendMessage(chatId, message);
 
   const messageData = {
     id: result.id._serialized,
@@ -180,19 +194,20 @@ async function sendMessage(number, message) {
     groupName: null,
   };
 
-  db.pushTo('messages', messageData);
-  db.incrementStat('messagesSent');
+  db.pushToUser(userId, 'messages', messageData);
+  db.incrementStatUser(userId, 'messagesSent');
 
   return messageData;
 }
 
-async function sendGroupMessage(groupId, message) {
-  if (!client || connectionStatus !== 'ready') {
+async function sendGroupMessage(userId, groupId, message) {
+  const uc = getUserClient(userId);
+  if (!uc.client || uc.connectionStatus !== 'ready') {
     throw new Error('WhatsApp client is not connected');
   }
 
   const chatId = groupId.includes('@g.us') ? groupId : `${groupId}@g.us`;
-  const result = await client.sendMessage(chatId, message);
+  const result = await uc.client.sendMessage(chatId, message);
 
   const messageData = {
     id: result.id._serialized,
@@ -206,18 +221,19 @@ async function sendGroupMessage(groupId, message) {
     groupName: groupId,
   };
 
-  db.pushTo('messages', messageData);
-  db.incrementStat('messagesSent');
+  db.pushToUser(userId, 'messages', messageData);
+  db.incrementStatUser(userId, 'messagesSent');
 
   return messageData;
 }
 
-async function getGroups() {
-  if (!client || connectionStatus !== 'ready') {
+async function getGroups(userId) {
+  const uc = getUserClient(userId);
+  if (!uc.client || uc.connectionStatus !== 'ready') {
     throw new Error('WhatsApp client is not connected');
   }
 
-  const chats = await client.getChats();
+  const chats = await uc.client.getChats();
   return chats
     .filter((c) => c.isGroup)
     .map((c) => ({
@@ -228,38 +244,40 @@ async function getGroups() {
     }));
 }
 
-async function joinGroup(inviteCode) {
-  if (!client || connectionStatus !== 'ready') {
+async function joinGroup(userId, inviteCode) {
+  const uc = getUserClient(userId);
+  if (!uc.client || uc.connectionStatus !== 'ready') {
     throw new Error('WhatsApp client is not connected');
   }
 
-  // Extract invite code from URL if full URL is provided
   const code = inviteCode.replace('https://chat.whatsapp.com/', '');
-  const result = await client.acceptInvite(code);
-  db.incrementStat('groupsJoined');
+  const result = await uc.client.acceptInvite(code);
+  db.incrementStatUser(userId, 'groupsJoined');
   return result;
 }
 
-async function leaveGroup(groupId) {
-  if (!client || connectionStatus !== 'ready') {
+async function leaveGroup(userId, groupId) {
+  const uc = getUserClient(userId);
+  if (!uc.client || uc.connectionStatus !== 'ready') {
     throw new Error('WhatsApp client is not connected');
   }
 
   const chatId = groupId.includes('@g.us') ? groupId : `${groupId}@g.us`;
-  const chat = await client.getChatById(chatId);
+  const chat = await uc.client.getChatById(chatId);
   if (!chat.isGroup) throw new Error('Chat is not a group');
   await chat.leave();
-  db.incrementStat('groupsLeft');
+  db.incrementStatUser(userId, 'groupsLeft');
   return { success: true, groupId: chatId };
 }
 
-async function addToGroup(groupId, participants) {
-  if (!client || connectionStatus !== 'ready') {
+async function addToGroup(userId, groupId, participants) {
+  const uc = getUserClient(userId);
+  if (!uc.client || uc.connectionStatus !== 'ready') {
     throw new Error('WhatsApp client is not connected');
   }
 
   const chatId = groupId.includes('@g.us') ? groupId : `${groupId}@g.us`;
-  const chat = await client.getChatById(chatId);
+  const chat = await uc.client.getChatById(chatId);
   if (!chat.isGroup) throw new Error('Chat is not a group');
 
   const participantIds = participants.map((p) =>
@@ -270,25 +288,26 @@ async function addToGroup(groupId, participants) {
   return result;
 }
 
-async function disconnect() {
-  if (!client) throw new Error('No active WhatsApp session');
-  connectionStatus = 'disconnected';
-  qrCodeData = null;
-  clientInfo = null;
-  db.clearBotData();
+async function disconnect(userId) {
+  const uc = getUserClient(userId);
+  if (!uc.client) throw new Error('No active WhatsApp session');
+  uc.connectionStatus = 'disconnected';
+  uc.qrCodeData = null;
+  uc.clientInfo = null;
+  db.clearUserBotData(userId);
   try {
-    await client.logout();
+    await uc.client.logout();
   } catch {}
   try {
-    await client.destroy();
+    await uc.client.destroy();
   } catch {}
-  client = null;
-  console.log('🔌 WhatsApp disconnected by user');
+  uc.client = null;
+  console.log(`🔌 [${userId.slice(0, 8)}] WhatsApp disconnected by user`);
 }
 
-async function reconnect() {
-  console.log('🔄 Reconnecting WhatsApp...');
-  await initialize();
+async function reconnect(userId) {
+  console.log(`🔄 [${userId.slice(0, 8)}] Reconnecting WhatsApp...`);
+  await initialize(userId);
 }
 
 module.exports = {

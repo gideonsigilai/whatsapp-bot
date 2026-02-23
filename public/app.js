@@ -1,3 +1,8 @@
+// ── Auth State ──
+let authToken = localStorage.getItem('wa_token') || null;
+let currentUser = null;
+let resetEmail = ''; // stored between forgot → reset flow
+
 // ── API Base URL Config ──
 function getApiBase() {
   return localStorage.getItem('wa_api_base') || window.location.origin;
@@ -9,20 +14,183 @@ function setApiBase(url) {
   return clean;
 }
 
-// ── API Helper ──
+// ── API Helper (sends auth token) ──
 async function api(endpoint, options = {}) {
   try {
     const base = getApiBase();
+    const headers = { 'Content-Type': 'application/json' };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
     const res = await fetch(`${base}/api${endpoint}`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       ...options,
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed');
+    if (!res.ok) {
+      if (res.status === 401) {
+        // Token invalid — force logout
+        handleLogout();
+        throw new Error('Session expired — please log in again');
+      }
+      throw new Error(data.error || 'Request failed');
+    }
     return data;
   } catch (err) {
     throw err;
   }
+}
+
+// ── Auth API Helper (no token needed) ──
+async function authApi(endpoint, options = {}) {
+  const base = getApiBase();
+  const res = await fetch(`${base}/auth${endpoint}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ── Auth UI Management ──
+
+function showAuthView(view) {
+  const views = { login: 'authLogin', register: 'authRegister', forgot: 'authForgot', reset: 'authReset' };
+  const subtitles = {
+    login: 'Sign in to continue',
+    register: 'Create your account',
+    forgot: 'Reset your password',
+    reset: 'Enter the code from your server console',
+  };
+
+  Object.values(views).forEach((id) => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById(views[view]).style.display = '';
+  document.getElementById('authSubtitle').textContent = subtitles[view] || '';
+  hideAuthMessage();
+}
+
+function showAuthMessage(msg, type = 'error') {
+  const el = document.getElementById('authMessage');
+  el.textContent = msg;
+  el.className = `mt-4 text-center text-sm ${type === 'error' ? 'text-red-500' : 'text-green-500'}`;
+  el.classList.remove('hidden');
+}
+
+function hideAuthMessage() {
+  document.getElementById('authMessage').classList.add('hidden');
+}
+
+function showDashboard(user) {
+  currentUser = user;
+  authToken = localStorage.getItem('wa_token');
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('dashboardContent').style.display = '';
+  document.getElementById('userEmail').textContent = user.email;
+  startPolling();
+}
+
+function showAuthScreen() {
+  document.getElementById('authScreen').style.display = '';
+  document.getElementById('dashboardContent').style.display = 'none';
+  showAuthView('login');
+}
+
+// ── Auth Handlers ──
+
+async function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email || !password) return showAuthMessage('Please fill in all fields');
+
+  try {
+    hideAuthMessage();
+    const data = await authApi('/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    localStorage.setItem('wa_token', data.token);
+    authToken = data.token;
+    showDashboard(data.user);
+    toast('Logged in successfully', 'success');
+  } catch (err) {
+    showAuthMessage(err.message);
+  }
+}
+
+async function handleRegister() {
+  const email = document.getElementById('registerEmail').value.trim();
+  const password = document.getElementById('registerPassword').value;
+  const confirm = document.getElementById('registerConfirm').value;
+
+  if (!email || !password || !confirm) return showAuthMessage('Please fill in all fields');
+  if (password !== confirm) return showAuthMessage('Passwords do not match');
+  if (password.length < 6) return showAuthMessage('Password must be at least 6 characters');
+
+  try {
+    hideAuthMessage();
+    const data = await authApi('/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    localStorage.setItem('wa_token', data.token);
+    authToken = data.token;
+    showDashboard(data.user);
+    toast('Account created!', 'success');
+  } catch (err) {
+    showAuthMessage(err.message);
+  }
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) return showAuthMessage('Please enter your email');
+
+  try {
+    hideAuthMessage();
+    await authApi('/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+    resetEmail = email;
+    showAuthView('reset');
+    showAuthMessage('Check your server console for the reset code.', 'success');
+  } catch (err) {
+    showAuthMessage(err.message);
+  }
+}
+
+async function handleResetPassword() {
+  const otp = document.getElementById('resetOtp').value.trim();
+  const newPassword = document.getElementById('resetNewPassword').value;
+
+  if (!otp || !newPassword) return showAuthMessage('Please fill in all fields');
+  if (newPassword.length < 6) return showAuthMessage('Password must be at least 6 characters');
+
+  try {
+    hideAuthMessage();
+    const data = await authApi('/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email: resetEmail, otp, newPassword }),
+    });
+    localStorage.setItem('wa_token', data.token);
+    authToken = data.token;
+    showDashboard(data.user);
+    toast('Password reset! You are now logged in.', 'success');
+  } catch (err) {
+    showAuthMessage(err.message);
+  }
+}
+
+function handleLogout() {
+  localStorage.removeItem('wa_token');
+  authToken = null;
+  currentUser = null;
+  stopPolling();
+  showAuthScreen();
 }
 
 // ── Toast Notifications ──
@@ -55,6 +223,7 @@ function toggleDarkMode() {
 // ── Status Polling ──
 let lastStatus = null;
 let isQrDismissed = false;
+let pollingIntervals = [];
 
 async function pollStatus() {
   try {
@@ -95,7 +264,6 @@ async function pollStatus() {
       if (data.qr) {
         qrImg.src = data.qr;
         qrImg.alt = 'QR Code';
-        // Switch to QR ready state
         qrLoading.style.display = 'none';
         qrReady.style.display = '';
         if (!isQrDismissed) {
@@ -122,7 +290,7 @@ async function pollStatus() {
 
     lastStatus = data.status;
   } catch (err) {
-    // Server not reachable
+    // Server not reachable or auth error (handled in api())
   }
 }
 
@@ -402,7 +570,6 @@ async function disconnectWA() {
     await api('/disconnect', { method: 'POST' });
     toast('WhatsApp disconnected — data cleared', 'success');
 
-    // Clear frontend immediately
     cachedGroups = [];
     renderGroups([]);
     populateGroupSelects([]);
@@ -435,7 +602,6 @@ async function reconnectWA() {
   try {
     isQrDismissed = false;
 
-    // Show overlay immediately with loading spinner
     const overlay = document.getElementById('qrOverlay');
     const qrLoading = document.getElementById('qrLoading');
     const qrReady = document.getElementById('qrReady');
@@ -492,18 +658,53 @@ function escHtml(str) {
   return div.innerHTML;
 }
 
-// ── Init ──
+// ── Polling Control ──
 function startPolling() {
+  stopPolling(); // clear any existing intervals
   pollStatus();
   pollStats();
   refreshMessages();
   refreshHooks();
-  setInterval(pollStatus, 3000);
-  setInterval(pollStats, 5000);
-  setInterval(refreshMessages, 5000);
-  setInterval(refreshHooks, 15000);
+  pollingIntervals.push(setInterval(pollStatus, 3000));
+  pollingIntervals.push(setInterval(pollStats, 5000));
+  pollingIntervals.push(setInterval(refreshMessages, 5000));
+  pollingIntervals.push(setInterval(refreshHooks, 15000));
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  startPolling();
+function stopPolling() {
+  pollingIntervals.forEach((id) => clearInterval(id));
+  pollingIntervals = [];
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', async () => {
+  // Check if user has a stored token
+  if (authToken) {
+    try {
+      const base = getApiBase();
+      const res = await fetch(`${base}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const user = await res.json();
+        showDashboard(user);
+        return;
+      }
+    } catch {}
+    // Token invalid — clear and show login
+    localStorage.removeItem('wa_token');
+    authToken = null;
+  }
+
+  // No valid token — check if any users exist
+  try {
+    const data = await authApi('/check');
+    if (!data.hasUsers) {
+      showAuthView('register');
+    } else {
+      showAuthView('login');
+    }
+  } catch {
+    showAuthView('login');
+  }
 });

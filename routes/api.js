@@ -5,13 +5,13 @@ const db = require('../db');
 
 // GET /api/status — Bot connection status + QR code
 router.get('/status', (req, res) => {
-  res.json(waClient.getStatus());
+  res.json(waClient.getStatus(req.user.id));
 });
 
 // GET /api/stats — Dashboard statistics
 router.get('/stats', (req, res) => {
-  const stats = db.get('stats') || {};
-  const webhooks = db.get('webhooks') || [];
+  const stats = db.getUser(req.user.id, 'stats') || {};
+  const webhooks = db.getUser(req.user.id, 'webhooks') || [];
   res.json({
     ...stats,
     webhookCount: webhooks.length,
@@ -20,7 +20,7 @@ router.get('/stats', (req, res) => {
 
 // GET /api/messages — Recent message log
 router.get('/messages', (req, res) => {
-  const messages = db.get('messages') || [];
+  const messages = db.getUser(req.user.id, 'messages') || [];
   const limit = parseInt(req.query.limit) || 50;
   res.json(messages.slice(-limit).reverse());
 });
@@ -28,7 +28,7 @@ router.get('/messages', (req, res) => {
 // GET /api/groups — List all groups
 router.get('/groups', async (req, res) => {
   try {
-    const groups = await waClient.getGroups();
+    const groups = await waClient.getGroups(req.user.id);
     res.json(groups);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -42,7 +42,7 @@ router.post('/send-message', async (req, res) => {
     if (!number || !message) {
       return res.status(400).json({ error: 'number and message are required' });
     }
-    const result = await waClient.sendMessage(number, message);
+    const result = await waClient.sendMessage(req.user.id, number, message);
     res.json({ success: true, message: result });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -56,7 +56,7 @@ router.post('/send-group-message', async (req, res) => {
     if (!groupId || !message) {
       return res.status(400).json({ error: 'groupId and message are required' });
     }
-    const result = await waClient.sendGroupMessage(groupId, message);
+    const result = await waClient.sendGroupMessage(req.user.id, groupId, message);
     res.json({ success: true, message: result });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -70,7 +70,7 @@ router.post('/join-group', async (req, res) => {
     if (!inviteLink) {
       return res.status(400).json({ error: 'inviteLink is required' });
     }
-    const result = await waClient.joinGroup(inviteLink);
+    const result = await waClient.joinGroup(req.user.id, inviteLink);
     res.json({ success: true, result });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -84,7 +84,7 @@ router.post('/leave-group', async (req, res) => {
     if (!groupId) {
       return res.status(400).json({ error: 'groupId is required' });
     }
-    const result = await waClient.leaveGroup(groupId);
+    const result = await waClient.leaveGroup(req.user.id, groupId);
     res.json({ success: true, result });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -100,7 +100,7 @@ router.post('/add-to-group', async (req, res) => {
         error: 'groupId and participants (array) are required',
       });
     }
-    const result = await waClient.addToGroup(groupId, participants);
+    const result = await waClient.addToGroup(req.user.id, groupId, participants);
     res.json({ success: true, result });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -110,7 +110,7 @@ router.post('/add-to-group', async (req, res) => {
 // POST /api/disconnect — Disconnect WhatsApp session
 router.post('/disconnect', async (req, res) => {
   try {
-    await waClient.disconnect();
+    await waClient.disconnect(req.user.id);
     res.json({ success: true, message: 'WhatsApp disconnected' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -121,7 +121,7 @@ router.post('/disconnect', async (req, res) => {
 router.post('/reconnect', async (req, res) => {
   try {
     // Don't await — initialize is long-running, just kick it off
-    waClient.reconnect().catch((err) => console.error('Reconnect error:', err.message));
+    waClient.reconnect(req.user.id).catch((err) => console.error('Reconnect error:', err.message));
     res.json({ success: true, message: 'Reconnecting... scan QR if prompted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

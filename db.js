@@ -1,14 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'data.json');
+const DATA_DIR = path.join(__dirname, 'data');
+const USERS_DIR = path.join(DATA_DIR, 'users');
 
-const DEFAULT_DATA = {
-  config: {
-    botName: 'WA Bot Server',
-    port: 3000,
-    tunnelEnabled: false,
-  },
+const DEFAULT_USER_DATA = {
   messages: [],
   groups: [],
   webhooks: [],
@@ -20,71 +16,176 @@ const DEFAULT_DATA = {
   },
 };
 
-function load() {
+const DEFAULT_GLOBAL = {
+  config: {
+    botName: 'WA Bot Server',
+    port: 3000,
+    tunnelEnabled: false,
+  },
+};
+
+// ── Directory helpers ──
+
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+// ── Global config (shared, not per-user) ──
+
+const GLOBAL_PATH = path.join(DATA_DIR, 'global.json');
+
+function loadGlobal() {
   try {
-    if (!fs.existsSync(DB_PATH)) {
-      save(DEFAULT_DATA);
-      return { ...DEFAULT_DATA };
+    if (!fs.existsSync(GLOBAL_PATH)) {
+      saveGlobal(DEFAULT_GLOBAL);
+      return { ...DEFAULT_GLOBAL };
     }
-    const raw = fs.readFileSync(DB_PATH, 'utf-8');
-    return JSON.parse(raw);
+    return JSON.parse(fs.readFileSync(GLOBAL_PATH, 'utf-8'));
   } catch {
-    return { ...DEFAULT_DATA };
+    return { ...DEFAULT_GLOBAL };
   }
 }
 
-function save(data) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+function saveGlobal(data) {
+  ensureDir(DATA_DIR);
+  fs.writeFileSync(GLOBAL_PATH, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-function get(key) {
-  const data = load();
+function getGlobal(key) {
+  const data = loadGlobal();
   return data[key];
 }
 
-function set(key, value) {
-  const data = load();
+function setGlobal(key, value) {
+  const data = loadGlobal();
   data[key] = value;
-  save(data);
+  saveGlobal(data);
 }
 
-function pushTo(key, item) {
-  const data = load();
+// ── Per-user data ──
+
+// Validate userId to prevent path traversal attacks
+function sanitizeUserId(userId) {
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('Invalid user ID');
+  }
+  // Only allow UUID-format characters (alphanumeric + hyphens)
+  const clean = userId.replace(/[^a-zA-Z0-9\-]/g, '');
+  if (clean !== userId || clean.length === 0) {
+    throw new Error('Invalid user ID format');
+  }
+  return clean;
+}
+
+function userDataPath(userId) {
+  const safeId = sanitizeUserId(userId);
+  return path.join(USERS_DIR, safeId, 'data.json');
+}
+
+function initUser(userId) {
+  const p = userDataPath(userId);
+  ensureDir(path.dirname(p));
+  if (!fs.existsSync(p)) {
+    fs.writeFileSync(p, JSON.stringify(DEFAULT_USER_DATA, null, 2), 'utf-8');
+  }
+}
+
+function loadUser(userId) {
+  try {
+    const p = userDataPath(userId);
+    if (!fs.existsSync(p)) {
+      initUser(userId);
+      return { ...DEFAULT_USER_DATA };
+    }
+    return JSON.parse(fs.readFileSync(p, 'utf-8'));
+  } catch {
+    return { ...DEFAULT_USER_DATA };
+  }
+}
+
+function saveUser(userId, data) {
+  const p = userDataPath(userId);
+  ensureDir(path.dirname(p));
+  fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+function getUser(userId, key) {
+  const data = loadUser(userId);
+  return data[key];
+}
+
+function setUser(userId, key, value) {
+  const data = loadUser(userId);
+  data[key] = value;
+  saveUser(userId, data);
+}
+
+function pushToUser(userId, key, item) {
+  const data = loadUser(userId);
   if (!Array.isArray(data[key])) data[key] = [];
   data[key].push(item);
-  // Keep message log capped at 500
+  // Cap messages at 500
   if (key === 'messages' && data[key].length > 500) {
     data[key] = data[key].slice(-500);
   }
-  save(data);
+  saveUser(userId, data);
 }
 
-function removeFrom(key, predicate) {
-  const data = load();
+function removeFromUser(userId, key, predicate) {
+  const data = loadUser(userId);
   if (!Array.isArray(data[key])) return;
   data[key] = data[key].filter((item) => !predicate(item));
-  save(data);
+  saveUser(userId, data);
 }
 
-function incrementStat(statKey) {
-  const data = load();
-  if (!data.stats) data.stats = { ...DEFAULT_DATA.stats };
+function incrementStatUser(userId, statKey) {
+  const data = loadUser(userId);
+  if (!data.stats) data.stats = { ...DEFAULT_USER_DATA.stats };
   data.stats[statKey] = (data.stats[statKey] || 0) + 1;
-  save(data);
+  saveUser(userId, data);
 }
 
-function clearBotData() {
-  const data = load();
+function clearUserBotData(userId) {
+  const data = loadUser(userId);
   data.messages = [];
   data.webhooks = [];
-  data.stats = { ...DEFAULT_DATA.stats };
-  // Note: we do not clear 'config'
-  save(data);
+  data.stats = { ...DEFAULT_USER_DATA.stats };
+  saveUser(userId, data);
 }
 
-// Initialize on first require
-if (!fs.existsSync(DB_PATH)) {
-  save(DEFAULT_DATA);
+// ── Legacy global compat (for config access during startup) ──
+
+function get(key) {
+  return getGlobal(key);
 }
 
-module.exports = { load, save, get, set, pushTo, removeFrom, incrementStat, clearBotData };
+function set(key, value) {
+  return setGlobal(key, value);
+}
+
+// Initialize global config on first require
+ensureDir(DATA_DIR);
+if (!fs.existsSync(GLOBAL_PATH)) {
+  saveGlobal(DEFAULT_GLOBAL);
+}
+
+module.exports = {
+  // Global
+  loadGlobal,
+  saveGlobal,
+  getGlobal,
+  setGlobal,
+  get,
+  set,
+
+  // Per-user
+  initUser,
+  loadUser,
+  saveUser,
+  getUser,
+  setUser,
+  pushToUser,
+  removeFromUser,
+  incrementStatUser,
+  clearUserBotData,
+};

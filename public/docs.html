@@ -1,833 +1,516 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>API Documentation — WA Bot Server</title>
-  <meta name="description" content="WhatsApp Bot API documentation — endpoints, request/response schemas, and code examples">
-  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="WhatsApp Bot API documentation — authentication, endpoints, and code examples">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            background: { light: '#fafafa', dark: '#0a0a0a' },
+            border: { light: '#e5e5e5', dark: '#1a1a1a' },
+          },
+        },
+      },
+    };
+  </script>
   <style>
-    .docs-layout {
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      gap: 32px;
-      align-items: start;
-    }
+    .endpoint { transition: border-color 0.2s; }
+    .endpoint:hover { border-color: #333; }
+    .endpoint.open .endpoint-chevron { transform: rotate(90deg); }
+    .endpoint.open .endpoint-body { display: block; }
+    .endpoint-body { display: none; }
+    .endpoint-chevron { transition: transform 0.2s ease; }
 
-    @media (max-width: 900px) {
-      .docs-layout { grid-template-columns: 1fr; }
-      .docs-sidebar { display: none; }
-    }
-
-    /* Sidebar */
-    .docs-sidebar {
-      position: sticky;
-      top: 88px;
-    }
-
-    .sidebar-nav {
-      list-style: none;
-      padding: 0;
-    }
-
-    .sidebar-nav li { margin-bottom: 2px; }
-
-    .sidebar-nav a {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      border-radius: var(--radius-xs);
-      transition: var(--transition);
-    }
-
-    .sidebar-nav a:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-primary);
-    }
-
-    .sidebar-nav a.active {
-      background: var(--accent-dim);
-      color: var(--accent);
-    }
-
-    .sidebar-section {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      padding: 16px 14px 6px;
-    }
-
-    /* Docs Content */
-    .docs-content {
-      min-width: 0;
-    }
-
-    .docs-hero {
-      margin-bottom: 32px;
-    }
-
-    .docs-hero h1 {
-      font-size: 32px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      margin-bottom: 8px;
-      background: linear-gradient(135deg, var(--text-primary), var(--accent));
-      background-clip: text;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .docs-hero p {
-      color: var(--text-secondary);
-      font-size: 15px;
-      line-height: 1.6;
-    }
-
-    .base-url-box {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xs);
-      padding: 12px 16px;
-      margin-top: 16px;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-    }
-
-    .base-url-box .label {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      font-family: 'Inter', sans-serif;
-    }
-
-    /* Endpoint Card */
-    .endpoint {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 20px;
-      overflow: hidden;
-      transition: var(--transition);
-    }
-
-    .endpoint:hover {
-      border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .endpoint-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 16px 20px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .endpoint-header:hover {
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .method-badge {
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 700;
-      font-family: 'Courier New', monospace;
-      letter-spacing: 0.5px;
-      min-width: 56px;
-      text-align: center;
-    }
-
-    .method-badge.get {
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.2);
-    }
-
-    .method-badge.post {
-      background: var(--accent-dim);
-      color: var(--accent);
-      border: 1px solid rgba(37, 211, 102, 0.2);
-    }
-
-    .method-badge.delete {
-      background: var(--danger-dim);
-      color: var(--danger);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    .endpoint-path {
-      font-size: 14px;
-      font-weight: 600;
-      font-family: 'Courier New', monospace;
-      color: var(--text-primary);
-    }
-
-    .endpoint-desc {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-left: auto;
-    }
-
-    .endpoint-chevron {
-      color: var(--text-muted);
-      transition: transform 0.2s ease;
-      font-size: 12px;
-    }
-
-    .endpoint.open .endpoint-chevron {
-      transform: rotate(90deg);
-    }
-
-    .endpoint-body {
-      display: none;
-      padding: 0 20px 20px;
-      border-top: 1px solid var(--border);
-    }
-
-    .endpoint.open .endpoint-body {
-      display: block;
-    }
-
-    .endpoint-section-title {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--text-muted);
-      margin: 16px 0 8px;
-    }
-
-    /* Code Blocks */
-    .code-block {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-xs);
-      padding: 14px 16px;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      line-height: 1.6;
-      overflow-x: auto;
-      color: var(--text-secondary);
-      position: relative;
-    }
-
-    .code-block .copy-btn {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--text-muted);
-      font-size: 11px;
-      padding: 3px 8px;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      transition: var(--transition);
-    }
-
-    .code-block .copy-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: var(--text-primary);
-    }
-
+    .code-block { position: relative; }
     .code-block .kw { color: #c084fc; }
     .code-block .str { color: #86efac; }
     .code-block .key { color: #93c5fd; }
     .code-block .num { color: #fbbf24; }
     .code-block .cmt { color: #6b7280; font-style: italic; }
+    .code-block .hdr { color: #f472b6; }
 
-    /* Params Table */
-    .params-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(255,255,255,0.06); border: 1px solid #333;
+      border-radius: 4px; color: #666; font-size: 11px;
+      padding: 3px 8px; cursor: pointer; font-family: 'Inter',sans-serif;
+      transition: all 0.15s;
     }
+    .copy-btn:hover { background: rgba(255,255,255,0.12); color: #ccc; }
 
-    .params-table th {
-      text-align: left;
-      padding: 8px 12px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .params-table td {
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text-secondary);
-    }
-
-    .params-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .param-name {
-      font-family: 'Courier New', monospace;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .param-type {
-      font-size: 11px;
-      padding: 2px 6px;
-      border-radius: 3px;
-      background: rgba(139, 92, 246, 0.15);
-      color: #a78bfa;
-    }
-
-    .param-required {
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 3px;
-      background: var(--danger-dim);
-      color: var(--danger);
-      font-weight: 600;
-    }
-
-    /* Back link */
-    .back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 13px;
-      margin-bottom: 20px;
-      transition: var(--transition);
-    }
-
-    .back-link:hover {
-      color: var(--accent);
-    }
+    .sidebar-nav a.active { background: rgba(255,255,255,0.06); color: #fff; }
+    .sidebar-nav a:hover { background: rgba(255,255,255,0.04); color: #ddd; }
   </style>
 </head>
-<body>
+<body class="bg-background-dark text-neutral-200 min-h-screen p-4 md:p-8 font-[Inter]">
 
   <!-- Header -->
-  <header class="header">
-    <div class="header-inner">
-      <div class="header-left">
-        <div class="header-logo">📖</div>
-        <h1>API Documentation</h1>
+  <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 border-b border-border-dark pb-6">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded border border-neutral-200 flex items-center justify-center">
+        <span class="material-symbols-outlined text-neutral-200">description</span>
       </div>
-      <div class="header-right">
-        <a href="/" class="btn btn-secondary btn-sm">← Dashboard</a>
+      <div>
+        <h1 class="text-xl font-semibold tracking-tight text-white uppercase">API Documentation</h1>
+        <p class="text-xs text-neutral-500 font-mono mt-0.5">WA Bot Server</p>
       </div>
     </div>
+    <a href="/" class="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium border border-neutral-700 hover:bg-neutral-800 transition-colors text-neutral-300 no-underline">
+      <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+      Dashboard
+    </a>
   </header>
 
-  <main class="main">
-    <div class="docs-layout">
+  <div class="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-8 items-start">
 
-      <!-- Sidebar -->
-      <aside class="docs-sidebar">
-        <nav>
-          <ul class="sidebar-nav">
-            <li class="sidebar-section">Overview</li>
-            <li><a href="#overview" class="active">🏠 Getting Started</a></li>
-            <li class="sidebar-section">Messaging</li>
-            <li><a href="#send-message">✉️ Send Message</a></li>
-            <li><a href="#send-group-message">👥 Send Group Message</a></li>
-            <li><a href="#get-messages">📋 Get Messages</a></li>
-            <li class="sidebar-section">Groups</li>
-            <li><a href="#get-groups">📂 List Groups</a></li>
-            <li><a href="#join-group">🔗 Join Group</a></li>
-            <li><a href="#leave-group">🚪 Leave Group</a></li>
-            <li><a href="#add-to-group">➕ Add to Group</a></li>
-            <li class="sidebar-section">Webhooks</li>
-            <li><a href="#list-hooks">🔔 List Webhooks</a></li>
-            <li><a href="#register-hook">📌 Register Webhook</a></li>
-            <li><a href="#unregister-hook">🗑️ Remove Webhook</a></li>
-            <li class="sidebar-section">System</li>
-            <li><a href="#get-status">📡 Bot Status</a></li>
-            <li><a href="#get-stats">📊 Statistics</a></li>
-          </ul>
-        </nav>
-      </aside>
+    <!-- Sidebar -->
+    <aside class="hidden md:block sticky top-8">
+      <nav>
+        <ul class="sidebar-nav space-y-0.5 text-[13px]">
+          <li class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 px-3 py-2">Overview</li>
+          <li><a href="#overview" class="active block px-3 py-2 rounded text-neutral-400 no-underline">🏠 Getting Started</a></li>
+          <li><a href="#authentication" class="block px-3 py-2 rounded text-neutral-400 no-underline">🔐 Authentication</a></li>
 
-      <!-- Content -->
-      <div class="docs-content">
+          <li class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 px-3 pt-4 pb-2">Auth Endpoints</li>
+          <li><a href="#auth-register" class="block px-3 py-2 rounded text-neutral-400 no-underline">📝 Register</a></li>
+          <li><a href="#auth-login" class="block px-3 py-2 rounded text-neutral-400 no-underline">🔑 Login</a></li>
+          <li><a href="#auth-me" class="block px-3 py-2 rounded text-neutral-400 no-underline">👤 Current User</a></li>
+          <li><a href="#auth-forgot" class="block px-3 py-2 rounded text-neutral-400 no-underline">🔄 Forgot Password</a></li>
+          <li><a href="#auth-reset" class="block px-3 py-2 rounded text-neutral-400 no-underline">🔁 Reset Password</a></li>
 
-        <!-- Hero -->
-        <div class="docs-hero" id="overview">
-          <h1>WA Bot Server API</h1>
-          <p>Complete REST API reference for the WhatsApp Bot server. All endpoints accept and return JSON. Use the base URL below for all requests.</p>
-          <div class="base-url-box">
-            <span class="label">Base URL</span>
-            <code id="baseUrl">http://localhost:3000</code>
-          </div>
+          <li class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 px-3 pt-4 pb-2">Messaging</li>
+          <li><a href="#send-message" class="block px-3 py-2 rounded text-neutral-400 no-underline">✉️ Send Message</a></li>
+          <li><a href="#send-group-message" class="block px-3 py-2 rounded text-neutral-400 no-underline">👥 Send Group Message</a></li>
+          <li><a href="#get-messages" class="block px-3 py-2 rounded text-neutral-400 no-underline">📋 Get Messages</a></li>
+
+          <li class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 px-3 pt-4 pb-2">Groups</li>
+          <li><a href="#get-groups" class="block px-3 py-2 rounded text-neutral-400 no-underline">📂 List Groups</a></li>
+          <li><a href="#join-group" class="block px-3 py-2 rounded text-neutral-400 no-underline">🔗 Join Group</a></li>
+          <li><a href="#leave-group" class="block px-3 py-2 rounded text-neutral-400 no-underline">🚪 Leave Group</a></li>
+          <li><a href="#add-to-group" class="block px-3 py-2 rounded text-neutral-400 no-underline">➕ Add to Group</a></li>
+
+          <li class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 px-3 pt-4 pb-2">Webhooks</li>
+          <li><a href="#list-hooks" class="block px-3 py-2 rounded text-neutral-400 no-underline">🔔 List Webhooks</a></li>
+          <li><a href="#register-hook" class="block px-3 py-2 rounded text-neutral-400 no-underline">📌 Register Webhook</a></li>
+          <li><a href="#unregister-hook" class="block px-3 py-2 rounded text-neutral-400 no-underline">🗑️ Remove Webhook</a></li>
+
+          <li class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 px-3 pt-4 pb-2">System</li>
+          <li><a href="#get-status" class="block px-3 py-2 rounded text-neutral-400 no-underline">📡 Bot Status</a></li>
+          <li><a href="#get-stats" class="block px-3 py-2 rounded text-neutral-400 no-underline">📊 Statistics</a></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Content -->
+    <div class="min-w-0">
+
+      <!-- Hero -->
+      <div id="overview" class="mb-10">
+        <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">WA Bot Server API</h1>
+        <p class="text-neutral-400 text-[15px] leading-relaxed max-w-2xl">Complete REST API reference. All endpoints accept and return JSON. All <code class="text-neutral-300 bg-neutral-800 px-1.5 py-0.5 rounded text-xs">/api/*</code> routes require a valid Bearer token.</p>
+        <div class="flex items-center gap-3 mt-4 bg-neutral-900 border border-neutral-800 rounded px-4 py-3 font-mono text-sm">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 font-[Inter]">Base URL</span>
+          <code id="baseUrl" class="text-neutral-300">http://localhost:3000</code>
+        </div>
+      </div>
+
+      <!-- ═══ AUTHENTICATION SECTION ═══ -->
+      <div id="authentication" class="mb-10 p-6 rounded border border-neutral-800 bg-neutral-900/50">
+        <h2 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+          <span class="material-symbols-outlined text-[20px]">shield</span>
+          Authentication
+        </h2>
+        <p class="text-neutral-400 text-sm leading-relaxed mb-4">All <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">/api/*</code> endpoints require authentication. Include your token in every request:</p>
+
+        <div class="bg-black/40 border border-neutral-800 rounded p-4 font-mono text-sm text-neutral-300 mb-4">
+          <span class="hdr">Authorization</span>: Bearer <span class="str">&lt;your-token&gt;</span>
         </div>
 
-        <!-- ═══════════════ MESSAGING ═══════════════ -->
+        <div class="space-y-2 text-sm text-neutral-400">
+          <p>📌 Get your token by calling <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">POST /auth/register</code> or <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">POST /auth/login</code>.</p>
+          <p>📌 Tokens are <strong class="text-neutral-300">long-lived</strong> — they never expire unless you reset your password.</p>
+          <p>📌 Resetting your password generates a new token, invalidating all old sessions.</p>
+          <p>📌 Each user has isolated data — messages, webhooks, stats, and WhatsApp sessions are fully separated.</p>
+        </div>
+      </div>
 
-        <!-- POST /api/send-message -->
-        <div class="endpoint" id="send-message">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge post">POST</span>
-            <span class="endpoint-path">/api/send-message</span>
-            <span class="endpoint-desc">Send a message to a phone number</span>
-            <span class="endpoint-chevron">▶</span>
+      <!-- ═══ AUTH ENDPOINTS ═══ -->
+
+      <!-- POST /auth/register -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="auth-register">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/auth/register</span>
+          <span class="text-xs text-neutral-600 ml-auto">Create a new account</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Request Body</p>
+          <table class="w-full text-sm border-collapse">
+            <thead><tr><th class="text-left p-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-800">Param</th><th class="text-left p-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-800">Type</th><th class="p-2 border-b border-neutral-800"></th><th class="text-left p-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-800">Description</th></tr></thead>
+            <tbody>
+              <tr><td class="p-2 font-mono font-semibold text-neutral-200 border-b border-neutral-800/50">email</td><td class="p-2 border-b border-neutral-800/50"><span class="text-[11px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400">string</span></td><td class="p-2 border-b border-neutral-800/50"><span class="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 font-semibold">Required</span></td><td class="p-2 text-neutral-400 border-b border-neutral-800/50">Your email address</td></tr>
+              <tr><td class="p-2 font-mono font-semibold text-neutral-200">password</td><td class="p-2"><span class="text-[11px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400">string</span></td><td class="p-2"><span class="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 font-semibold">Required</span></td><td class="p-2 text-neutral-400">Min 6 characters</td></tr>
+            </tbody>
+          </table>
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> -X POST http://localhost:3000/auth/register \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "email": "you@example.com", "password": "secret123" }'</span>
           </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Request Body</p>
-            <table class="params-table">
-              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="param-name">number</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td><span class="param-required">Required</span></td>
-                  <td>Phone number with country code (e.g. <code>254712345678</code>)</td>
-                </tr>
-                <tr>
-                  <td><span class="param-name">message</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td><span class="param-required">Required</span></td>
-                  <td>The message text to send</td>
-                </tr>
-              </tbody>
-            </table>
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Response</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+{
+  <span class="key">"success"</span>: <span class="kw">true</span>,
+  <span class="key">"token"</span>: <span class="str">"a1b2c3d4e5f6..."</span>,
+  <span class="key">"user"</span>: { <span class="key">"id"</span>: <span class="str">"uuid-here"</span>, <span class="key">"email"</span>: <span class="str">"you@example.com"</span> }
+}
+          </div>
+        </div>
+      </div>
 
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <!-- POST /auth/login -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="auth-login">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/auth/login</span>
+          <span class="text-xs text-neutral-600 ml-auto">Sign in and get token</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Request Body</p>
+          <table class="w-full text-sm border-collapse">
+            <thead><tr><th class="text-left p-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-800">Param</th><th class="text-left p-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-800">Type</th><th class="p-2 border-b border-neutral-800"></th><th class="text-left p-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-800">Description</th></tr></thead>
+            <tbody>
+              <tr><td class="p-2 font-mono font-semibold text-neutral-200 border-b border-neutral-800/50">email</td><td class="p-2 border-b border-neutral-800/50"><span class="text-[11px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400">string</span></td><td class="p-2 border-b border-neutral-800/50"><span class="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 font-semibold">Required</span></td><td class="p-2 text-neutral-400 border-b border-neutral-800/50">Your email address</td></tr>
+              <tr><td class="p-2 font-mono font-semibold text-neutral-200">password</td><td class="p-2"><span class="text-[11px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400">string</span></td><td class="p-2"><span class="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 font-semibold">Required</span></td><td class="p-2 text-neutral-400">Your password</td></tr>
+            </tbody>
+          </table>
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> -X POST http://localhost:3000/auth/login \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{ "email": "you@example.com", "password": "secret123" }'</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GET /auth/me -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="auth-me">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-blue-900/30 text-blue-400 border border-blue-800/40">GET</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/auth/me</span>
+          <span class="text-xs text-neutral-600 ml-auto">Get current user info (requires token)</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/auth/me \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span>
+          </div>
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Response</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+{ <span class="key">"id"</span>: <span class="str">"uuid"</span>, <span class="key">"email"</span>: <span class="str">"you@example.com"</span> }
+          </div>
+        </div>
+      </div>
+
+      <!-- POST /auth/forgot-password -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="auth-forgot">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/auth/forgot-password</span>
+          <span class="text-xs text-neutral-600 ml-auto">Request OTP (logged to server console)</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Request Body</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+{ <span class="key">"email"</span>: <span class="str">"you@example.com"</span> }
+          </div>
+          <p class="mt-3 text-xs text-neutral-500">💡 The 6-digit OTP will appear in your <strong class="text-neutral-400">server console</strong>. Valid for 15 minutes. Max 5 attempts.</p>
+        </div>
+      </div>
+
+      <!-- POST /auth/reset-password -->
+      <div class="endpoint rounded border border-neutral-800 mb-10 overflow-hidden" id="auth-reset">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/auth/reset-password</span>
+          <span class="text-xs text-neutral-600 ml-auto">Reset password with OTP</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Request Body</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+{
+  <span class="key">"email"</span>: <span class="str">"you@example.com"</span>,
+  <span class="key">"otp"</span>: <span class="str">"123456"</span>,
+  <span class="key">"newPassword"</span>: <span class="str">"newSecret123"</span>
+}
+          </div>
+          <p class="mt-3 text-xs text-neutral-500">⚠️ Resets your token — all existing sessions are invalidated. You'll receive a new token in the response.</p>
+        </div>
+      </div>
+
+      <!-- ═══ MESSAGING ENDPOINTS ═══ -->
+
+      <!-- POST /api/send-message -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="send-message">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/send-message</span>
+          <span class="text-xs text-neutral-600 ml-auto">Send a message to a phone number</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Request Body</p>
+          <table class="w-full text-sm border-collapse">
+            <thead><tr><th class="text-left p-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-800">Param</th><th class="text-left p-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-800">Type</th><th class="p-2 border-b border-neutral-800"></th><th class="text-left p-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-600 border-b border-neutral-800">Description</th></tr></thead>
+            <tbody>
+              <tr><td class="p-2 font-mono font-semibold text-neutral-200 border-b border-neutral-800/50">number</td><td class="p-2 border-b border-neutral-800/50"><span class="text-[11px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400">string</span></td><td class="p-2 border-b border-neutral-800/50"><span class="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 font-semibold">Required</span></td><td class="p-2 text-neutral-400 border-b border-neutral-800/50">Phone number with country code (e.g. <code class="text-neutral-300 text-xs">254712345678</code>)</td></tr>
+              <tr><td class="p-2 font-mono font-semibold text-neutral-200">message</td><td class="p-2"><span class="text-[11px] px-1.5 py-0.5 rounded bg-purple-900/30 text-purple-400">string</span></td><td class="p-2"><span class="text-[10px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 font-semibold">Required</span></td><td class="p-2 text-neutral-400">The message text to send</td></tr>
+            </tbody>
+          </table>
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
 <span class="kw">curl</span> -X POST http://localhost:3000/api/send-message \
   -H <span class="str">"Content-Type: application/json"</span> \
-  -d <span class="str">'{
-    "number": "254712345678",
-    "message": "Hello from the bot!"
-  }'</span>
-            </div>
-
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
-{
-  <span class="key">"success"</span>: <span class="kw">true</span>,
-  <span class="key">"message"</span>: {
-    <span class="key">"id"</span>: <span class="str">"true_254712345678@c.us_3EB0..."</span>,
-    <span class="key">"from"</span>: <span class="str">"me"</span>,
-    <span class="key">"to"</span>: <span class="str">"254712345678@c.us"</span>,
-    <span class="key">"body"</span>: <span class="str">"Hello from the bot!"</span>,
-    <span class="key">"timestamp"</span>: <span class="str">"2026-02-21T12:00:00.000Z"</span>,
-    <span class="key">"type"</span>: <span class="str">"sent"</span>
-  }
-}
-            </div>
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
+  -d <span class="str">'{ "number": "254712345678", "message": "Hello from the bot!" }'</span>
           </div>
         </div>
+      </div>
 
-        <!-- POST /api/send-group-message -->
-        <div class="endpoint" id="send-group-message">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge post">POST</span>
-            <span class="endpoint-path">/api/send-group-message</span>
-            <span class="endpoint-desc">Send a message to a group</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Request Body</p>
-            <table class="params-table">
-              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="param-name">groupId</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td><span class="param-required">Required</span></td>
-                  <td>Group ID (e.g. <code>120363012345@g.us</code>). Get from <code>/api/groups</code></td>
-                </tr>
-                <tr>
-                  <td><span class="param-name">message</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td><span class="param-required">Required</span></td>
-                  <td>The message text to send</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <!-- POST /api/send-group-message -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="send-group-message">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/send-group-message</span>
+          <span class="text-xs text-neutral-600 ml-auto">Send a message to a group</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
 <span class="kw">curl</span> -X POST http://localhost:3000/api/send-group-message \
   -H <span class="str">"Content-Type: application/json"</span> \
-  -d <span class="str">'{
-    "groupId": "120363012345@g.us",
-    "message": "Hello group!"
-  }'</span>
-            </div>
-
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
-{
-  <span class="key">"success"</span>: <span class="kw">true</span>,
-  <span class="key">"message"</span>: {
-    <span class="key">"id"</span>: <span class="str">"true_120363012345@g.us_3EB0..."</span>,
-    <span class="key">"from"</span>: <span class="str">"me"</span>,
-    <span class="key">"to"</span>: <span class="str">"120363012345@g.us"</span>,
-    <span class="key">"body"</span>: <span class="str">"Hello group!"</span>,
-    <span class="key">"type"</span>: <span class="str">"sent"</span>,
-    <span class="key">"isGroup"</span>: <span class="kw">true</span>
-  }
-}
-            </div>
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
+  -d <span class="str">'{ "groupId": "120363012345@g.us", "message": "Hello group!" }'</span>
           </div>
         </div>
+      </div>
 
-        <!-- GET /api/messages -->
-        <div class="endpoint" id="get-messages">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge get">GET</span>
-            <span class="endpoint-path">/api/messages</span>
-            <span class="endpoint-desc">Get recent message log</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Query Parameters</p>
-            <table class="params-table">
-              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="param-name">limit</span></td>
-                  <td><span class="param-type">number</span></td>
-                  <td></td>
-                  <td>Max messages to return (default: <code>50</code>)</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-<span class="kw">curl</span> http://localhost:3000/api/messages?limit=10
-            </div>
-
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
-[
-  {
-    <span class="key">"id"</span>: <span class="str">"true_254712345678@c.us_3EB0..."</span>,
-    <span class="key">"from"</span>: <span class="str">"254712345678@c.us"</span>,
-    <span class="key">"body"</span>: <span class="str">"Hey!"</span>,
-    <span class="key">"timestamp"</span>: <span class="str">"2026-02-21T12:00:00.000Z"</span>,
-    <span class="key">"type"</span>: <span class="str">"received"</span>,
-    <span class="key">"contactName"</span>: <span class="str">"John"</span>,
-    <span class="key">"isGroup"</span>: <span class="kw">false</span>
-  }
-]
-            </div>
+      <!-- GET /api/messages -->
+      <div class="endpoint rounded border border-neutral-800 mb-10 overflow-hidden" id="get-messages">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-blue-900/30 text-blue-400 border border-blue-800/40">GET</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/messages</span>
+          <span class="text-xs text-neutral-600 ml-auto">Get recent message log</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/messages?limit=10 \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span>
           </div>
         </div>
+      </div>
 
-        <!-- ═══════════════ GROUPS ═══════════════ -->
+      <!-- ═══ GROUPS ═══ -->
 
-        <!-- GET /api/groups -->
-        <div class="endpoint" id="get-groups">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge get">GET</span>
-            <span class="endpoint-path">/api/groups</span>
-            <span class="endpoint-desc">List all joined groups</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-<span class="kw">curl</span> http://localhost:3000/api/groups
-            </div>
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
-[
-  {
-    <span class="key">"id"</span>: <span class="str">"120363012345@g.us"</span>,
-    <span class="key">"name"</span>: <span class="str">"Dev Team"</span>,
-    <span class="key">"participantCount"</span>: <span class="num">12</span>,
-    <span class="key">"isReadOnly"</span>: <span class="kw">false</span>
-  }
-]
-            </div>
+      <!-- GET /api/groups -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="get-groups">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-blue-900/30 text-blue-400 border border-blue-800/40">GET</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/groups</span>
+          <span class="text-xs text-neutral-600 ml-auto">List all joined groups</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/groups \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span>
           </div>
         </div>
+      </div>
 
-        <!-- POST /api/join-group -->
-        <div class="endpoint" id="join-group">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge post">POST</span>
-            <span class="endpoint-path">/api/join-group</span>
-            <span class="endpoint-desc">Join a group via invite link</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Request Body</p>
-            <table class="params-table">
-              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="param-name">inviteLink</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td><span class="param-required">Required</span></td>
-                  <td>WhatsApp invite URL (e.g. <code>https://chat.whatsapp.com/ABC123</code>)</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <!-- POST /api/join-group -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="join-group">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/join-group</span>
+          <span class="text-xs text-neutral-600 ml-auto">Join group via invite link</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
 <span class="kw">curl</span> -X POST http://localhost:3000/api/join-group \
   -H <span class="str">"Content-Type: application/json"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
   -d <span class="str">'{ "inviteLink": "https://chat.whatsapp.com/ABC123" }'</span>
-            </div>
-
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
-{ <span class="key">"success"</span>: <span class="kw">true</span>, <span class="key">"result"</span>: <span class="str">"120363012345@g.us"</span> }
-            </div>
           </div>
         </div>
+      </div>
 
-        <!-- POST /api/leave-group -->
-        <div class="endpoint" id="leave-group">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge post">POST</span>
-            <span class="endpoint-path">/api/leave-group</span>
-            <span class="endpoint-desc">Leave a group</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Request Body</p>
-            <table class="params-table">
-              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="param-name">groupId</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td><span class="param-required">Required</span></td>
-                  <td>The group ID to leave (e.g. <code>120363012345@g.us</code>)</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <!-- POST /api/leave-group -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="leave-group">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/leave-group</span>
+          <span class="text-xs text-neutral-600 ml-auto">Leave a group</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
 <span class="kw">curl</span> -X POST http://localhost:3000/api/leave-group \
   -H <span class="str">"Content-Type: application/json"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
   -d <span class="str">'{ "groupId": "120363012345@g.us" }'</span>
-            </div>
-
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
-{ <span class="key">"success"</span>: <span class="kw">true</span>, <span class="key">"result"</span>: { <span class="key">"success"</span>: <span class="kw">true</span>, <span class="key">"groupId"</span>: <span class="str">"120363012345@g.us"</span> } }
-            </div>
           </div>
         </div>
+      </div>
 
-        <!-- POST /api/add-to-group -->
-        <div class="endpoint" id="add-to-group">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge post">POST</span>
-            <span class="endpoint-path">/api/add-to-group</span>
-            <span class="endpoint-desc">Add participants to a group</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Request Body</p>
-            <table class="params-table">
-              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="param-name">groupId</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td><span class="param-required">Required</span></td>
-                  <td>The group ID</td>
-                </tr>
-                <tr>
-                  <td><span class="param-name">participants</span></td>
-                  <td><span class="param-type">string[]</span></td>
-                  <td><span class="param-required">Required</span></td>
-                  <td>Array of phone numbers to add</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <!-- POST /api/add-to-group -->
+      <div class="endpoint rounded border border-neutral-800 mb-10 overflow-hidden" id="add-to-group">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/add-to-group</span>
+          <span class="text-xs text-neutral-600 ml-auto">Add participants to a group</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
 <span class="kw">curl</span> -X POST http://localhost:3000/api/add-to-group \
   -H <span class="str">"Content-Type: application/json"</span> \
-  -d <span class="str">'{
-    "groupId": "120363012345@g.us",
-    "participants": ["254712345678", "254798765432"]
-  }'</span>
-            </div>
-
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
-{ <span class="key">"success"</span>: <span class="kw">true</span>, <span class="key">"result"</span>: { ... } }
-            </div>
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
+  -d <span class="str">'{ "groupId": "120363012345@g.us", "participants": ["254712345678"] }'</span>
           </div>
         </div>
+      </div>
 
-        <!-- ═══════════════ WEBHOOKS ═══════════════ -->
+      <!-- ═══ WEBHOOKS ═══ -->
 
-        <!-- GET /api/hooks -->
-        <div class="endpoint" id="list-hooks">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge get">GET</span>
-            <span class="endpoint-path">/api/hooks</span>
-            <span class="endpoint-desc">List registered webhooks</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-<span class="kw">curl</span> http://localhost:3000/api/hooks
-            </div>
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
-[
-  {
-    <span class="key">"id"</span>: <span class="str">"m1abc12"</span>,
-    <span class="key">"url"</span>: <span class="str">"https://example.com/webhook"</span>,
-    <span class="key">"name"</span>: <span class="str">"My App"</span>,
-    <span class="key">"createdAt"</span>: <span class="str">"2026-02-21T12:00:00.000Z"</span>
-  }
-]
-            </div>
+      <!-- GET /api/hooks -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="list-hooks">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-blue-900/30 text-blue-400 border border-blue-800/40">GET</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/hooks</span>
+          <span class="text-xs text-neutral-600 ml-auto">List registered webhooks</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/hooks \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span>
           </div>
         </div>
+      </div>
 
-        <!-- POST /api/hooks/register -->
-        <div class="endpoint" id="register-hook">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge post">POST</span>
-            <span class="endpoint-path">/api/hooks/register</span>
-            <span class="endpoint-desc">Register a webhook URL</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Request Body</p>
-            <table class="params-table">
-              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="param-name">url</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td><span class="param-required">Required</span></td>
-                  <td>Webhook URL to receive POST requests on incoming messages</td>
-                </tr>
-                <tr>
-                  <td><span class="param-name">name</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td></td>
-                  <td>Friendly name for the webhook (defaults to the URL)</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <!-- POST /api/hooks/register -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="register-hook">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-green-900/30 text-green-400 border border-green-800/40">POST</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/hooks/register</span>
+          <span class="text-xs text-neutral-600 ml-auto">Register a webhook URL</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
 <span class="kw">curl</span> -X POST http://localhost:3000/api/hooks/register \
   -H <span class="str">"Content-Type: application/json"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
   -d <span class="str">'{ "url": "https://example.com/webhook", "name": "My App" }'</span>
-            </div>
-
-            <p class="endpoint-section-title">Webhook Payload</p>
-            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
-              When a message is received, the following JSON is POSTed to your URL:
-            </p>
-            <div class="code-block">
+          </div>
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Webhook Payload</p>
+          <p class="text-xs text-neutral-500 mb-2">When a message is received, the following JSON is POSTed to your URL:</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
 {
   <span class="key">"id"</span>: <span class="str">"false_254712345678@c.us_3EB0..."</span>,
   <span class="key">"from"</span>: <span class="str">"254712345678@c.us"</span>,
-  <span class="key">"to"</span>: <span class="str">"254700000000@c.us"</span>,
   <span class="key">"body"</span>: <span class="str">"Hello!"</span>,
-  <span class="key">"timestamp"</span>: <span class="str">"2026-02-21T12:00:00.000Z"</span>,
+  <span class="key">"timestamp"</span>: <span class="str">"2026-02-23T12:00:00.000Z"</span>,
   <span class="key">"type"</span>: <span class="str">"received"</span>,
   <span class="key">"contactName"</span>: <span class="str">"John"</span>,
-  <span class="key">"isGroup"</span>: <span class="kw">false</span>,
-  <span class="key">"groupName"</span>: <span class="kw">null</span>
+  <span class="key">"isGroup"</span>: <span class="kw">false</span>
 }
-            </div>
           </div>
         </div>
+      </div>
 
-        <!-- DELETE /api/hooks/unregister -->
-        <div class="endpoint" id="unregister-hook">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge delete">DELETE</span>
-            <span class="endpoint-path">/api/hooks/unregister</span>
-            <span class="endpoint-desc">Remove a webhook</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Request Body</p>
-            <table class="params-table">
-              <thead><tr><th>Parameter</th><th>Type</th><th></th><th>Description</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><span class="param-name">id</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td></td>
-                  <td>The webhook ID (provide <code>id</code> or <code>url</code>)</td>
-                </tr>
-                <tr>
-                  <td><span class="param-name">url</span></td>
-                  <td><span class="param-type">string</span></td>
-                  <td></td>
-                  <td>The webhook URL to remove</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      <!-- DELETE /api/hooks/unregister -->
+      <div class="endpoint rounded border border-neutral-800 mb-10 overflow-hidden" id="unregister-hook">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-red-900/30 text-red-400 border border-red-800/40">DELETE</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/hooks/unregister</span>
+          <span class="text-xs text-neutral-600 ml-auto">Remove a webhook</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
 <span class="kw">curl</span> -X DELETE http://localhost:3000/api/hooks/unregister \
   -H <span class="str">"Content-Type: application/json"</span> \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span> \
   -d <span class="str">'{ "id": "m1abc12" }'</span>
-            </div>
           </div>
         </div>
+      </div>
 
-        <!-- ═══════════════ SYSTEM ═══════════════ -->
+      <!-- ═══ SYSTEM ═══ -->
 
-        <!-- GET /api/status -->
-        <div class="endpoint" id="get-status">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge get">GET</span>
-            <span class="endpoint-path">/api/status</span>
-            <span class="endpoint-desc">Bot connection status and QR code</span>
-            <span class="endpoint-chevron">▶</span>
+      <!-- GET /api/status -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="get-status">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-blue-900/30 text-blue-400 border border-blue-800/40">GET</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/status</span>
+          <span class="text-xs text-neutral-600 ml-auto">Bot connection status + QR code</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/status \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span>
           </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-<span class="kw">curl</span> http://localhost:3000/api/status
-            </div>
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Response</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
 {
-  <span class="key">"status"</span>: <span class="str">"ready"</span>,  <span class="cmt">// "disconnected" | "qr" | "ready"</span>
+  <span class="key">"status"</span>: <span class="str">"ready"</span>,  <span class="cmt">// "disconnected" | "qr" | "initializing" | "ready"</span>
   <span class="key">"qr"</span>: <span class="kw">null</span>,        <span class="cmt">// base64 data URL when status is "qr"</span>
   <span class="key">"info"</span>: {
     <span class="key">"pushname"</span>: <span class="str">"My Bot"</span>,
@@ -835,26 +518,27 @@
     <span class="key">"platform"</span>: <span class="str">"android"</span>
   }
 }
-            </div>
           </div>
         </div>
+      </div>
 
-        <!-- GET /api/stats -->
-        <div class="endpoint" id="get-stats">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge get">GET</span>
-            <span class="endpoint-path">/api/stats</span>
-            <span class="endpoint-desc">Dashboard statistics</span>
-            <span class="endpoint-chevron">▶</span>
+      <!-- GET /api/stats -->
+      <div class="endpoint rounded border border-neutral-800 mb-4 overflow-hidden" id="get-stats">
+        <div class="endpoint-header flex items-center gap-3 px-5 py-3.5 cursor-pointer select-none hover:bg-neutral-800/30" onclick="toggleEndpoint(this)">
+          <span class="px-2.5 py-1 rounded text-[11px] font-bold font-mono bg-blue-900/30 text-blue-400 border border-blue-800/40">GET</span>
+          <span class="text-sm font-semibold font-mono text-neutral-200">/api/stats</span>
+          <span class="text-xs text-neutral-600 ml-auto">Dashboard statistics</span>
+          <span class="endpoint-chevron text-neutral-600 text-xs">▶</span>
+        </div>
+        <div class="endpoint-body px-5 pb-5 border-t border-neutral-800">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Example</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+<span class="kw">curl</span> http://localhost:3000/api/stats \
+  -H <span class="str">"Authorization: Bearer YOUR_TOKEN"</span>
           </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-<span class="kw">curl</span> http://localhost:3000/api/stats
-            </div>
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 mt-4 mb-2">Response</p>
+          <div class="code-block bg-black/40 border border-neutral-800 rounded p-4 font-mono text-[13px] leading-relaxed text-neutral-400 overflow-x-auto">
 {
   <span class="key">"messagesSent"</span>: <span class="num">42</span>,
   <span class="key">"messagesReceived"</span>: <span class="num">128</span>,
@@ -862,34 +546,17 @@
   <span class="key">"groupsLeft"</span>: <span class="num">1</span>,
   <span class="key">"webhookCount"</span>: <span class="num">2</span>
 }
-            </div>
           </div>
         </div>
-
-        <!-- GET /api/tunnel -->
-        <div class="endpoint" id="get-tunnel">
-          <div class="endpoint-header" onclick="toggleEndpoint(this)">
-            <span class="method-badge get">GET</span>
-            <span class="endpoint-path">/api/tunnel</span>
-            <span class="endpoint-desc">Cloudflare tunnel public URL</span>
-            <span class="endpoint-chevron">▶</span>
-          </div>
-          <div class="endpoint-body">
-            <p class="endpoint-section-title">Example Request</p>
-            <div class="code-block">
-              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-<span class="kw">curl</span> http://localhost:3000/api/tunnel
-            </div>
-            <p class="endpoint-section-title">Response</p>
-            <div class="code-block">
-{ <span class="key">"url"</span>: <span class="str">"https://your-tunnel-id.trycloudflare.com"</span> }
-            </div>
-          </div>
-        </div>
-
       </div>
+
     </div>
-  </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="mt-12 border-t border-border-dark pt-8 pb-8 text-center">
+    <p class="text-neutral-600 text-xs uppercase tracking-widest font-medium">Built with Bun + Express + whatsapp-web.js</p>
+  </footer>
 
   <script>
     function toggleEndpoint(header) {
@@ -915,15 +582,19 @@
       });
     }, { rootMargin: '-100px 0px -70% 0px' });
 
-    document.querySelectorAll('.endpoint, .docs-hero').forEach(el => observer.observe(el));
+    document.querySelectorAll('.endpoint, #overview, #authentication').forEach(el => observer.observe(el));
 
-    // Replace all localhost:3000 references with the current server origin
+    // Replace localhost with actual origin + inject real token
     document.addEventListener('DOMContentLoaded', () => {
       const origin = localStorage.getItem('wa_api_base') || window.location.origin;
+      const token = localStorage.getItem('wa_token');
       function replaceInNode(node) {
         if (node.nodeType === Node.TEXT_NODE) {
           if (node.textContent.includes('http://localhost:3000')) {
             node.textContent = node.textContent.replaceAll('http://localhost:3000', origin);
+          }
+          if (token && node.textContent.includes('YOUR_TOKEN')) {
+            node.textContent = node.textContent.replaceAll('YOUR_TOKEN', token);
           }
         } else {
           node.childNodes.forEach(replaceInNode);
