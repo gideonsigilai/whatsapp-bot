@@ -6,12 +6,21 @@ const fetch = require('node-fetch');
 const fs = require('fs');
 const { execSync } = require('child_process');
 
-/**
- * Find system-installed Chrome/Chromium executable.
- */
 function findChrome() {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+  const path = require('path');
+  
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
     return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  const bins = ['chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable', 'chrome'];
+  if (process.env.PATH) {
+    for (const dir of process.env.PATH.split(path.delimiter)) {
+      for (const bin of bins) {
+        const full = path.join(dir, bin);
+        if (fs.existsSync(full)) return full;
+      }
+    }
   }
 
   const paths = process.platform === 'win32'
@@ -36,11 +45,6 @@ function findChrome() {
   for (const p of paths) {
     try { if (fs.existsSync(p)) return p; } catch {}
   }
-
-  try {
-    const found = execSync('command -v chromium || command -v chromium-browser || command -v google-chrome || command -v chrome', { encoding: 'utf8' }).trim().split('\n')[0];
-    if (found) return found;
-  } catch {}
 
   return undefined;
 }
