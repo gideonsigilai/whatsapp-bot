@@ -8,7 +8,7 @@ const hookRoutes = require('./routes/hooks');
 const db = require('./db');
 
 const app = express();
-const PORT = db.get('config')?.port || 3000;
+const PORT = process.env.PORT || db.get('config')?.port || 3000;
 
 // Middleware
 app.use((req, res, next) => {
@@ -63,20 +63,28 @@ app.post('/api/tunnel/toggle', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`\n🌐 Dashboard:  http://localhost:${PORT}`);
-  console.log(`📡 API:        http://localhost:${PORT}/api\n`);
+  const publicUrl = process.env.RAILWAY_PUBLIC_DOMAIN
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : `http://localhost:${PORT}`;
+  console.log(`\n🌐 Dashboard:  ${publicUrl}`);
+  console.log(`📡 API:        ${publicUrl}/api\n`);
 
   // Initialize WhatsApp client (async, won't block server)
   waClient.initialize().catch((err) => {
     console.error('⚠️  WhatsApp init failed:', err.message);
   });
 
-  // Only start tunnel if enabled in config
-  const config = db.get('config') || {};
-  if (config.tunnelEnabled) {
-    startTunnel();
+  // Skip tunnel when running on Railway/cloud
+  const isCloud = !!process.env.RAILWAY_ENVIRONMENT;
+  if (!isCloud) {
+    const config = db.get('config') || {};
+    if (config.tunnelEnabled) {
+      startTunnel();
+    } else {
+      console.log('☁️  Cloudflare Tunnel is disabled. Enable via the dashboard toggle.\n');
+    }
   } else {
-    console.log('☁️  Cloudflare Tunnel is disabled. Enable via the dashboard toggle.\n');
+    console.log('☁️  Running on Railway — tunnel not needed.\n');
   }
 });
 

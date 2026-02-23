@@ -4,11 +4,19 @@ const QRCode = require('qrcode');
 const db = require('./db');
 const fetch = require('node-fetch');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 /**
  * Find system-installed Chrome/Chromium executable.
+ * Priority: env PUPPETEER_EXECUTABLE_PATH > common paths > `which chromium`
  */
 function findChrome() {
+  // 1. Explicit env var (set by nixpacks.toml on Railway)
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  // 2. Common static paths
   const paths = process.platform === 'win32'
     ? [
         process.env['PROGRAMFILES'] + '\\Google\\Chrome\\Application\\chrome.exe',
@@ -20,14 +28,25 @@ function findChrome() {
         '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
         '/Applications/Chromium.app/Contents/MacOS/Chromium',
       ]
-    : ['/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium'];
+    : [
+        '/usr/bin/google-chrome',
+        '/usr/bin/chromium-browser',
+        '/usr/bin/chromium',
+        '/usr/local/bin/chromium',
+        '/nix/var/nix/profiles/default/bin/chromium',
+      ];
 
   for (const p of paths) {
-    try {
-      if (fs.existsSync(p)) return p;
-    } catch {}
+    try { if (fs.existsSync(p)) return p; } catch {}
   }
-  return undefined; // fall back to Puppeteer default
+
+  // 3. Dynamic lookup via `which`
+  try {
+    const found = execSync('which chromium || which chromium-browser || which google-chrome', { encoding: 'utf8' }).trim().split('\n')[0];
+    if (found) return found;
+  } catch {}
+
+  return undefined; // fall back to Puppeteer bundled Chrome
 }
 
 let client = null;
