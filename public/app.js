@@ -64,15 +64,18 @@ async function pollStatus() {
     const text = document.getElementById('statusText');
     const overlay = document.getElementById('qrOverlay');
     const qrImg = document.getElementById('qrImage');
+    const qrLoading = document.getElementById('qrLoading');
+    const qrReady = document.getElementById('qrReady');
 
     const btnDisconnect = document.getElementById('btnDisconnect');
     const btnReconnect = document.getElementById('btnReconnect');
 
     if (data.status === 'ready') {
-      dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-green-500';
-      ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75';
+      dot.style.background = '#31cb00';
+      ping.style.background = '#31cb00';
+      ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75';
       text.textContent = `Connected — ${data.info?.pushname || 'Bot'}`;
-      text.className = 'text-xs font-mono text-green-600 dark:text-green-400';
+      text.style.color = '#31cb00';
       overlay.classList.remove('visible');
       btnDisconnect.style.display = '';
       btnReconnect.style.display = 'none';
@@ -82,24 +85,30 @@ async function pollStatus() {
         refreshGroups();
       }
     } else if (data.status === 'qr') {
-      dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-amber-500';
-      ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75';
+      dot.style.background = '#f1d302';
+      ping.style.background = '#f1d302';
+      ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75';
       text.textContent = 'Scan QR Code';
-      text.className = 'text-xs font-mono text-amber-600 dark:text-amber-400';
+      text.style.color = '#f1d302';
       btnDisconnect.style.display = 'none';
       btnReconnect.style.display = '';
       if (data.qr) {
         qrImg.src = data.qr;
         qrImg.alt = 'QR Code';
+        // Switch to QR ready state
+        qrLoading.style.display = 'none';
+        qrReady.style.display = '';
         if (!isQrDismissed) {
           overlay.classList.add('visible');
         }
       }
     } else {
-      dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-neutral-400';
-      ping.className = 'absolute inline-flex h-full w-full rounded-full bg-neutral-400 opacity-0';
-      text.textContent = data.status === 'initializing' ? 'Connecting...' : 'Disconnected';
-      text.className = 'text-xs font-mono text-neutral-500 dark:text-neutral-400';
+      dot.style.background = '#737373';
+      ping.style.background = '#737373';
+      ping.className = 'absolute inline-flex h-full w-full rounded-full opacity-0';
+      const statusMsg = data.status === 'initializing' ? 'Initializing…' : 'Disconnected';
+      text.textContent = statusMsg;
+      text.style.color = data.status === 'initializing' ? '#f1d302' : '#737373';
       overlay.classList.remove('visible');
       btnDisconnect.style.display = 'none';
       btnReconnect.style.display = '';
@@ -386,12 +395,33 @@ async function removeHook(id) {
 async function disconnectWA() {
   if (!confirm('Disconnect WhatsApp? You will need to scan a QR code to reconnect.')) return;
   try {
+    const btn = document.getElementById('btnDisconnect');
+    btn.innerHTML = '<span class="qr-spinner-inline"></span> Disconnecting…';
+    btn.disabled = true;
+
     await api('/disconnect', { method: 'POST' });
-    toast('WhatsApp disconnected', 'success');
-    document.getElementById('btnDisconnect').style.display = 'none';
+    toast('WhatsApp disconnected — data cleared', 'success');
+
+    // Clear frontend immediately
+    cachedGroups = [];
+    renderGroups([]);
+    populateGroupSelects([]);
+    document.getElementById('statSent').textContent = '0';
+    document.getElementById('statReceived').textContent = '0';
+    document.getElementById('statGroups').textContent = '0';
+    document.getElementById('statWebhooks').textContent = '0';
+    refreshMessages();
+    refreshHooks();
+
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">power_settings_new</span> Disconnect';
+    btn.disabled = false;
+    btn.style.display = 'none';
     document.getElementById('btnReconnect').style.display = '';
     pollStatus();
   } catch (err) {
+    const btn = document.getElementById('btnDisconnect');
+    btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">power_settings_new</span> Disconnect';
+    btn.disabled = false;
     toast('Failed to disconnect: ' + err.message, 'error');
   }
 }
@@ -404,15 +434,25 @@ function closeQrOverlay() {
 async function reconnectWA() {
   try {
     isQrDismissed = false;
-    document.getElementById('qrOverlay').classList.add('visible');
-    const qrImg = document.getElementById('qrImage');
-    qrImg.removeAttribute('src');
-    qrImg.alt = 'Generating new QR Code... Please wait.';
 
-    document.getElementById('btnReconnect').textContent = '⏳ Connecting...';
+    // Show overlay immediately with loading spinner
+    const overlay = document.getElementById('qrOverlay');
+    const qrLoading = document.getElementById('qrLoading');
+    const qrReady = document.getElementById('qrReady');
+    const statusText = document.getElementById('qrStatusText');
+
+    qrLoading.style.display = '';
+    qrReady.style.display = 'none';
+    statusText.textContent = 'Preparing…';
+    overlay.classList.add('visible');
+
+    document.getElementById('btnReconnect').innerHTML = '<span class="qr-spinner-inline"></span> Connecting…';
     document.getElementById('btnReconnect').disabled = true;
+
     await api('/reconnect', { method: 'POST' });
+    statusText.textContent = 'Waiting for QR code…';
     toast('Reconnecting… scan QR if prompted', 'info');
+
     setTimeout(() => {
       document.getElementById('btnReconnect').innerHTML = '<span class="material-symbols-outlined text-[18px]">refresh</span> Reconnect';
       document.getElementById('btnReconnect').disabled = false;
@@ -421,6 +461,7 @@ async function reconnectWA() {
   } catch (err) {
     document.getElementById('btnReconnect').innerHTML = '<span class="material-symbols-outlined text-[18px]">refresh</span> Reconnect';
     document.getElementById('btnReconnect').disabled = false;
+    document.getElementById('qrOverlay').classList.remove('visible');
     toast('Failed to reconnect: ' + err.message, 'error');
   }
 }

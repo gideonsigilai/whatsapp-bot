@@ -9,6 +9,38 @@
     'opsz' 24;
 }
 
+/* ── Accent Colors ── */
+:root {
+  --accent-success: #31cb00;
+  --accent-warning: #f1d302;
+  --accent-error: #e53e3e;
+}
+
+/* ── QR Spinner ── */
+.qr-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(128, 128, 128, 0.15);
+  border-top-color: var(--accent-warning);
+  border-radius: 50%;
+  animation: qrSpin 0.8s linear infinite;
+}
+
+@keyframes qrSpin {
+  to { transform: rotate(360deg); }
+}
+
+.qr-spinner-inline {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(128, 128, 128, 0.2);
+  border-top-color: var(--accent-warning);
+  border-radius: 50%;
+  animation: qrSpin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;
@@ -97,26 +129,26 @@
 
 .toast.success {
   background: #171717;
-  color: #a3e635;
+  color: var(--accent-success);
   border: 1px solid #262626;
 }
 
 .toast.error {
   background: #171717;
-  color: #f87171;
+  color: var(--accent-error);
   border: 1px solid #262626;
 }
 
 .toast.info {
   background: #171717;
-  color: #93c5fd;
+  color: var(--accent-warning);
   border: 1px solid #262626;
 }
 
 /* Light mode toast overrides */
 html:not(.dark) .toast.success {
   background: #fafafa;
-  color: #166534;
+  color: #1a7a00;
   border: 1px solid #e5e5e5;
 }
 
@@ -128,7 +160,7 @@ html:not(.dark) .toast.error {
 
 html:not(.dark) .toast.info {
   background: #fafafa;
-  color: #1e40af;
+  color: #8a7a00;
   border: 1px solid #e5e5e5;
 }
 

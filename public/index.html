@@ -91,11 +91,22 @@
           <button class="absolute top-4 right-4 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors" onclick="closeQrOverlay()">
             <span class="material-symbols-outlined">close</span>
           </button>
-          <h2 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">Scan QR Code</h2>
-          <p class="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
-            Open WhatsApp → Settings → Linked Devices → Link a Device
-          </p>
-          <img id="qrImage" src="" alt="QR Code" class="w-64 h-64 rounded bg-white p-3 mx-auto" />
+          <!-- Loading state -->
+          <div id="qrLoading" class="flex flex-col items-center">
+            <div class="qr-spinner mb-6"></div>
+            <h2 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">Generating QR Code</h2>
+            <p class="text-sm text-neutral-500 dark:text-neutral-400">Initializing WhatsApp client…</p>
+            <p id="qrStatusText" class="text-xs font-mono mt-3" style="color: #f1d302;">Preparing…</p>
+          </div>
+          <!-- QR Ready state -->
+          <div id="qrReady" style="display: none;">
+            <h2 class="text-lg font-semibold text-neutral-900 dark:text-white mb-2">Scan QR Code</h2>
+            <p class="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
+              Open WhatsApp → Settings → Linked Devices → Link a Device
+            </p>
+            <img id="qrImage" src="" alt="QR Code" class="w-64 h-64 rounded bg-white p-3 mx-auto" />
+            <p class="text-xs font-mono mt-4" style="color: #f1d302;">Waiting for scan…</p>
+          </div>
         </div>
       </div>
     </div>
