@@ -90,7 +90,10 @@ async function initialize(userId) {
   uc.lastError = null;
 
   const client = new Client({
-    authStrategy: new LocalAuth({ clientId: userId }),
+    authStrategy: new LocalAuth({ 
+      clientId: userId,
+      dataPath: path.join(__dirname, 'data')
+    }),
     puppeteer: {
       headless: true,
       executablePath: findChrome(),
