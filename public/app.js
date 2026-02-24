@@ -841,10 +841,10 @@ function startPolling() {
   pollStats();
   refreshMessages();
   refreshHooks();
-  pollingIntervals.push(setInterval(pollStatus, 3000));
-  pollingIntervals.push(setInterval(pollStats, 5000));
-  pollingIntervals.push(setInterval(refreshMessages, 5000));
-  pollingIntervals.push(setInterval(refreshHooks, 15000));
+  pollingIntervals.push(setInterval(pollStatus, 15000));
+  pollingIntervals.push(setInterval(pollStats, 30000));
+  pollingIntervals.push(setInterval(refreshMessages, 15000));
+  pollingIntervals.push(setInterval(refreshHooks, 60000));
 }
 
 function stopPolling() {
