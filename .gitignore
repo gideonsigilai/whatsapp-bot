@@ -1,12 +1,10 @@
-# Dependencies
-node_modules/
+# Binaries
+*.exe
+server
 
-# Data & config (contains sensitive tokens)
+# Data & config
 data/
 cloudflare-config.json
-
-# Cloudflare binary
-node_modules/cloudflared/bin/
 
 # OS files
 .DS_Store
@@ -19,7 +17,3 @@ desktop.ini
 
 # Logs
 *.log
-npm-debug.log*
-
-# Lock files (optional — remove if you want to track bun.lock)
-bun.lockb

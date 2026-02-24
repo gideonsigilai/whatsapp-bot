@@ -262,10 +262,43 @@ async function pollStatus() {
       btnDisconnect.style.display = 'none';
       btnReconnect.style.display = '';
       if (data.qr) {
-        qrImg.src = data.qr;
-        qrImg.alt = 'QR Code';
+        document.getElementById('qrImage').src = data.qr;
+        
+        document.getElementById('connectionMethodForm').style.display = 'none';
         qrLoading.style.display = 'none';
         qrReady.style.display = '';
+        
+        document.getElementById('readyTitle').textContent = 'Scan QR Code';
+        document.getElementById('readyInstructions').textContent = 'Open WhatsApp → Settings → Linked Devices → Link a Device';
+        document.getElementById('pairingCodeContainer').style.display = 'none';
+        document.getElementById('qrImageContainer').style.display = '';
+        document.getElementById('readyStatus').textContent = 'Waiting for scan…';
+        
+        if (!isQrDismissed) {
+          overlay.classList.add('visible');
+        }
+      }
+    } else if (data.status === 'pairing_code') {
+      dot.style.background = '#f1d302';
+      ping.style.background = '#f1d302';
+      ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75';
+      text.textContent = 'Pairing Code Active';
+      text.style.color = '#f1d302';
+      btnDisconnect.style.display = 'none';
+      btnReconnect.style.display = '';
+      if (data.pairingCode) {
+        document.getElementById('pairingCodeDisplay').textContent = data.pairingCode;
+        
+        document.getElementById('connectionMethodForm').style.display = 'none';
+        qrLoading.style.display = 'none';
+        qrReady.style.display = '';
+        
+        document.getElementById('readyTitle').textContent = 'Link with Phone Number';
+        document.getElementById('readyInstructions').textContent = 'Open WhatsApp → Settings → Linked Devices → Link a Device → Link with phone number instead';
+        document.getElementById('pairingCodeContainer').style.display = '';
+        document.getElementById('qrImageContainer').style.display = 'none';
+        document.getElementById('readyStatus').textContent = 'Waiting for pairing…';
+        
         if (!isQrDismissed) {
           overlay.classList.add('visible');
         }
@@ -281,10 +314,10 @@ async function pollStatus() {
       if (statusText && overlay.classList.contains('visible') && !isQrDismissed) {
         statusText.textContent = data.error || 'Initialization failed. Check logs.';
         statusText.style.color = '#ef4444';
-        qrLoading.style.display = '';
+        
+        document.getElementById('connectionMethodForm').style.display = '';
+        qrLoading.style.display = 'none';
         qrReady.style.display = 'none';
-        const spinner = qrLoading.querySelector('.qr-spinner');
-        if (spinner) spinner.style.display = 'none';
       } else if (lastStatus !== 'error') {
         toast('Connection failed: ' + (data.error || 'Check server logs'), 'error');
       }
@@ -306,7 +339,11 @@ async function pollStatus() {
       text.style.color = data.status === 'initializing' ? '#f1d302' : '#737373';
       
       if (data.status === 'disconnected') {
-        overlay.classList.remove('visible');
+        if (lastStatus && lastStatus !== 'disconnected' && lastStatus !== 'initializing' && overlay.classList.contains('visible')) {
+          document.getElementById('connectionMethodForm').style.display = '';
+          document.getElementById('qrLoading').style.display = 'none';
+          document.getElementById('qrReady').style.display = 'none';
+        }
       } else if (data.status === 'initializing' && !isQrDismissed) {
         overlay.classList.add('visible');
         qrLoading.style.display = '';
@@ -639,7 +676,6 @@ function closeQrOverlay() {
   isQrDismissed = true;
   document.getElementById('qrOverlay').classList.remove('visible');
 }
-
 async function reconnectWA() {
   try {
     isQrDismissed = false;
@@ -647,34 +683,111 @@ async function reconnectWA() {
     const overlay = document.getElementById('qrOverlay');
     const qrLoading = document.getElementById('qrLoading');
     const qrReady = document.getElementById('qrReady');
+    const connectionMethodForm = document.getElementById('connectionMethodForm');
     const statusText = document.getElementById('qrStatusText');
 
-    const spinner = qrLoading.querySelector('.qr-spinner');
-    if (spinner) spinner.style.display = '';
-
-    qrLoading.style.display = '';
+    connectionMethodForm.style.display = '';
+    qrLoading.style.display = 'none';
     qrReady.style.display = 'none';
+    overlay.classList.add('visible');
+
+  } catch (err) {
+    toast('Failed to open connect dialog: ' + err.message, 'error');
+  }
+}
+
+async function requestPairing() {
+  const phoneNumber = document.getElementById('pairingPhoneNumber').value.trim();
+  if (!phoneNumber) return toast('Please enter a phone number', 'error');
+
+  try {
+    const btn = document.getElementById('btnRequestPairingCode');
+    btn.innerHTML = '<span class="qr-spinner-inline"></span> Requesting…';
+    btn.disabled = true;
+
+    const qrLoading = document.getElementById('qrLoading');
+    const connectionMethodForm = document.getElementById('connectionMethodForm');
+    const statusText = document.getElementById('qrStatusText');
+    const spinner = qrLoading.querySelector('.qr-spinner');
+
+    if (spinner) spinner.style.display = '';
+    connectionMethodForm.style.display = 'none';
+    qrLoading.style.display = '';
     statusText.textContent = 'Preparing…';
     statusText.style.color = '#f1d302';
-    overlay.classList.add('visible');
 
     document.getElementById('btnReconnect').innerHTML = '<span class="qr-spinner-inline"></span> Connecting…';
     document.getElementById('btnReconnect').disabled = true;
 
-    await api('/reconnect', { method: 'POST' });
-    statusText.textContent = 'Waiting for QR code…';
-    toast('Reconnecting… scan QR if prompted', 'info');
+    await api('/reconnect', { 
+      method: 'POST',
+      body: JSON.stringify({ method: 'pairing_code', phoneNumber })
+    });
+    
+    statusText.textContent = 'Waiting for pairing code…';
+    toast('Requesting pairing code…', 'info');
 
     setTimeout(() => {
       document.getElementById('btnReconnect').innerHTML = '<span class="material-symbols-outlined text-[18px]">refresh</span> Reconnect';
       document.getElementById('btnReconnect').disabled = false;
+      btn.innerHTML = 'Generate Pairing Code';
+      btn.disabled = false;
       pollStatus();
     }, 3000);
   } catch (err) {
+    const btn = document.getElementById('btnRequestPairingCode');
+    btn.innerHTML = 'Generate Pairing Code';
+    btn.disabled = false;
     document.getElementById('btnReconnect').innerHTML = '<span class="material-symbols-outlined text-[18px]">refresh</span> Reconnect';
     document.getElementById('btnReconnect').disabled = false;
     document.getElementById('qrOverlay').classList.remove('visible');
-    toast('Failed to reconnect: ' + err.message, 'error');
+    toast('Failed to request pairing code: ' + err.message, 'error');
+  }
+}
+
+async function requestQrCode() {
+  try {
+    const btn = document.getElementById('btnRequestQrCode');
+    btn.innerHTML = '<span class="qr-spinner-inline"></span> Generating…';
+    btn.disabled = true;
+
+    const qrLoading = document.getElementById('qrLoading');
+    const connectionMethodForm = document.getElementById('connectionMethodForm');
+    const statusText = document.getElementById('qrStatusText');
+    const spinner = qrLoading.querySelector('.qr-spinner');
+
+    if (spinner) spinner.style.display = '';
+    connectionMethodForm.style.display = 'none';
+    qrLoading.style.display = '';
+    statusText.textContent = 'Preparing…';
+    statusText.style.color = '#f1d302';
+
+    document.getElementById('btnReconnect').innerHTML = '<span class="qr-spinner-inline"></span> Connecting…';
+    document.getElementById('btnReconnect').disabled = true;
+
+    await api('/reconnect', { 
+      method: 'POST',
+      body: JSON.stringify({ method: 'qr' })
+    });
+    
+    statusText.textContent = 'Waiting for QR code…';
+    toast('Requesting QR code…', 'info');
+
+    setTimeout(() => {
+      document.getElementById('btnReconnect').innerHTML = '<span class="material-symbols-outlined text-[18px]">refresh</span> Reconnect';
+      document.getElementById('btnReconnect').disabled = false;
+      btn.innerHTML = 'Generate QR Code';
+      btn.disabled = false;
+      pollStatus();
+    }, 3000);
+  } catch (err) {
+    const btn = document.getElementById('btnRequestQrCode');
+    btn.innerHTML = 'Generate QR Code';
+    btn.disabled = false;
+    document.getElementById('btnReconnect').innerHTML = '<span class="material-symbols-outlined text-[18px]">refresh</span> Reconnect';
+    document.getElementById('btnReconnect').disabled = false;
+    document.getElementById('qrOverlay').classList.remove('visible');
+    toast('Failed to request QR code: ' + err.message, 'error');
   }
 }
 
@@ -687,6 +800,23 @@ function switchTab(btn, tabId) {
     b.classList.add('border-transparent', 'text-neutral-400');
   });
   container.querySelectorAll('.tab-content').forEach((t) => {
+    t.classList.remove('active');
+    t.style.display = 'none';
+  });
+  btn.classList.add('active', 'border-neutral-900', 'dark:border-white', 'text-neutral-900', 'dark:text-white');
+  btn.classList.remove('border-transparent', 'text-neutral-400');
+  const target = document.getElementById(tabId);
+  target.classList.add('active');
+  target.style.display = '';
+}
+
+function switchConnTab(btn, tabId) {
+  const container = btn.closest('#connectionMethodForm');
+  container.querySelectorAll('.tab-btn-new-conn').forEach((b) => {
+    b.classList.remove('active', 'border-neutral-900', 'dark:border-white', 'text-neutral-900', 'dark:text-white');
+    b.classList.add('border-transparent', 'text-neutral-400');
+  });
+  container.querySelectorAll('.tab-content-conn').forEach((t) => {
     t.classList.remove('active');
     t.style.display = 'none';
   });
