@@ -257,3 +257,28 @@ func ClearUserBotData(userId string) {
 	data.Stats = UserStats{}
 	SaveUser(userId, data)
 }
+
+func RegisterWebhook(userId string, hook map[string]interface{}) {
+	data := LoadUser(userId)
+	data.Webhooks = append(data.Webhooks, hook)
+	SaveUser(userId, data)
+}
+
+func UnregisterWebhook(userId string, hookId string) {
+	data := LoadUser(userId)
+	var newHooks []interface{}
+	for _, h := range data.Webhooks {
+		hw := h.(map[string]interface{})
+		if fmt.Sprintf("%v", hw["id"]) != hookId {
+			newHooks = append(newHooks, h)
+		}
+	}
+	data.Webhooks = newHooks
+	SaveUser(userId, data)
+}
+
+func GetWebhooks(userId string) []interface{} {
+	data := LoadUser(userId)
+	return data.Webhooks
+}
+

@@ -225,6 +225,52 @@ func main() {
 		return c.JSON(groups)
 	})
 
+	api.Get("/hooks", func(c *fiber.Ctx) error {
+		userId := c.Locals("userId").(string)
+		return c.JSON(storage.GetWebhooks(userId))
+	})
+
+	api.Post("/hooks/register", func(c *fiber.Ctx) error {
+		type Req struct {
+			URL  string `json:"url"`
+			Name string `json:"name"`
+		}
+		var body Req
+		if err := c.BodyParser(&body); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid format"})
+		}
+		if body.URL == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "URL is required"})
+		}
+
+		userId := c.Locals("userId").(string)
+
+		// Generate a simple ID
+		hookId := fmt.Sprintf("hook_%d", time.Now().UnixNano())
+
+		hook := map[string]interface{}{
+			"id":   hookId,
+			"url":  body.URL,
+			"name": body.Name,
+		}
+
+		storage.RegisterWebhook(userId, hook)
+		return c.JSON(hook)
+	})
+
+	api.Delete("/hooks/unregister", func(c *fiber.Ctx) error {
+		type Req struct {
+			ID string `json:"id"`
+		}
+		var body Req
+		if err := c.BodyParser(&body); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid format"})
+		}
+		userId := c.Locals("userId").(string)
+		storage.UnregisterWebhook(userId, body.ID)
+		return c.JSON(fiber.Map{"success": true, "message": "Webhook removed"})
+	})
+
 	api.Post("/send-message", func(c *fiber.Ctx) error {
 		type Req struct {
 			Number  string `json:"number"`
