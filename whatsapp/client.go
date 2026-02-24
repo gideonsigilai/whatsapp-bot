@@ -213,6 +213,7 @@ func Initialize(userId string, method string, phoneNumber string) error {
 
 	// Create user-specific database container
 	dbPath := filepath.Join("data", "users", userId, "session.db")
+	os.MkdirAll(filepath.Dir(dbPath), 0755)
 	dsn := fmt.Sprintf("file:%s?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)", dbPath)
 	container, err := sqlstore.New(context.Background(), "sqlite", dsn, log)
 	if err != nil {
