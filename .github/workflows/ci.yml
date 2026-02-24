@@ -6,53 +6,35 @@ on:
   pull_request:
     branches: [main]
 
-# The deploy.yml workflow runs after this and handles Cloudflare Pages deployment.
-
 jobs:
   build:
-    name: Validate & Lint
+    name: Build & Verify
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          bun-version: latest
+          go-version: "1.22"
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: go mod download
 
       - name: Verify project files
         run: |
           echo "📁 Checking project structure..."
-          test -f index.js        && echo "  ✅ index.js"
-          test -f wa-client.js    && echo "  ✅ wa-client.js"
-          test -f db.js           && echo "  ✅ db.js"
-          test -f routes/api.js   && echo "  ✅ routes/api.js"
-          test -f routes/hooks.js && echo "  ✅ routes/hooks.js"
+          test -f main.go           && echo "  ✅ main.go"
+          test -f storage/store.go  && echo "  ✅ storage/store.go"
+          test -f storage/auth.go   && echo "  ✅ storage/auth.go"
+          test -f whatsapp/client.go && echo "  ✅ whatsapp/client.go"
           test -f public/index.html && echo "  ✅ public/index.html"
-          test -f public/docs.html  && echo "  ✅ public/docs.html"
-          test -f public/style.css  && echo "  ✅ public/style.css"
           test -f public/app.js     && echo "  ✅ public/app.js"
 
-      - name: Check syntax
+      - name: Build Go Server
         run: |
-          echo "🔍 Checking JavaScript syntax..."
-          for f in index.js wa-client.js db.js routes/api.js routes/hooks.js; do
-            node --check "$f" && echo "  ✅ $f"
-          done
-
-      - name: Validate package.json
-        run: |
-          echo "📦 Checking package.json..."
-          node -e "
-            const pkg = require('./package.json');
-            const required = ['name', 'version', 'main', 'scripts'];
-            required.forEach(k => {
-              if (!pkg[k]) throw new Error('Missing: ' + k);
-              console.log('  ✅ ' + k + ': ' + (typeof pkg[k] === 'object' ? JSON.stringify(pkg[k]) : pkg[k]));
-            });
-          "
+          echo "🔨 Compiling server binary..."
+          go build -v -o server main.go
+          test -f server && echo "  ✅ Build successful!"

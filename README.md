@@ -1,17 +1,17 @@
 <div align="center">
 
-# 💬 WA Bot Server
+# 💬 WA Bot Server (Golang Edition)
 
-**A powerful WhatsApp Bot API with a premium web dashboard, webhook system, and Cloudflare Tunnel integration.**
+**A high-performance WhatsApp Bot API powered by `whatsmeow` and `Fiber`, with a premium web dashboard and webhook system.**
 
-[![Runtime](https://img.shields.io/badge/runtime-Bun-f472b6?style=for-the-badge&logo=bun&logoColor=white)](https://bun.sh)
+[![Runtime](https://img.shields.io/badge/runtime-Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev)
 [![WhatsApp](https://img.shields.io/badge/WhatsApp-25D366?style=for-the-badge&logo=whatsapp&logoColor=white)](https://web.whatsapp.com)
-[![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com)
+[![Fiber](https://img.shields.io/badge/Fiber-000000?style=for-the-badge&logo=go&logoColor=white)](https://gofiber.io)
 [![License](https://img.shields.io/badge/license-ISC-blue?style=for-the-badge)](LICENSE)
 
 ---
 
-_Send messages • Manage groups • Receive webhooks • Beautiful dashboard_
+_Send messages • Manage groups • Full Auth • Fast & Concurrent • Zero Chromium dependencies_
 
 </div>
 
@@ -19,15 +19,16 @@ _Send messages • Manage groups • Receive webhooks • Beautiful dashboard_
 
 ## ✨ Features
 
-| Feature                    | Description                                                     |
-| -------------------------- | --------------------------------------------------------------- |
-| 📨 **Send Messages**       | Send text messages to any phone number or group                 |
-| 👥 **Group Management**    | Join, leave, and add members to groups                          |
-| 🔔 **Webhooks**            | Register webhook URLs to receive incoming messages in real-time |
-| 📊 **Live Dashboard**      | Premium dark glassmorphism UI with live stats and message log   |
-| 📖 **API Docs**            | Built-in interactive API documentation page                     |
-| 💾 **JSON Persistence**    | Messages, stats, and webhooks saved to `data.json`              |
-| 🔐 **Session Persistence** | WhatsApp session saved locally — scan QR once                   |
+| Feature                   | Description                                                       |
+| ------------------------- | ----------------------------------------------------------------- |
+| ⚡ **Go-powered Backend** | Rewritten completely in Go for ultra-low memory and extreme speed |
+| 📨 **Send Messages**      | Send text messages to any phone number or group                   |
+| 👥 **Group Management**   | Join, leave, and add members to groups                            |
+| 📱 **Phone Pairing**      | Link WhatsApp accounts directly via Phone Number (no QR needed)   |
+| 🔔 **Webhooks**           | Register webhook URLs to receive incoming messages in real-time   |
+| 📊 **Live Dashboard**     | Premium dark glassmorphism UI with live stats and message log     |
+| 🔐 **Multi-user Auth**    | Full user registration, encrypted JWT tokens, and login system    |
+| 💾 **JSON & SQLite**      | Uses high-performance pure Go SQLite (`glebarez/sqlite`)          |
 
 ---
 
@@ -35,27 +36,44 @@ _Send messages • Manage groups • Receive webhooks • Beautiful dashboard_
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) (runtime)
-- [Google Chrome](https://www.google.com/chrome/) (for WhatsApp Web automation)
+- [Go 1.22+](https://go.dev/dl/)
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/wa-server.git
-cd wa-server
+git clone https://github.com/gideonsigilai/whatsapp-bot.git
+cd whatsapp-bot
 
-# Install dependencies
-bun install
+# Download dependencies
+go mod download
 ```
 
 ### Start the Server
 
 ```bash
-bun run start
+go build -o server.exe main.go
+./server.exe
 ```
 
-Open **http://localhost:3000** in your browser. Scan the QR code with WhatsApp to link the bot.
+Open **http://localhost:3000** in your browser. Register an account and use the pairing code interface to quickly link your device.
+
+---
+
+## ☁️ Deployment (Railway / Cloudflare)
+
+This repository includes a `nixpacks.toml` file to automatically deploy the Go application on platforms like [Railway](https://railway.app).
+
+### ⚠️ IMPORTANT: Persistent Data
+
+Because WhatsApp session tokens and user accounts are stored in the filesystem (`data/` directory), **your deploying platform MUST be configured with a Persistent Volume mounted to `/app/data`**.
+
+**On Railway:**
+
+1. Open your Service Settings.
+2. Scroll down to **Volumes**.
+3. Create a new Volume and set the **Mount Path** to `/app/data`.
+4. Without this volume, every redeploy will wipe the `data/` folder and force users to re-scan WhatsApp!
 
 ---
 
@@ -63,121 +81,64 @@ Open **http://localhost:3000** in your browser. Scan the QR code with WhatsApp t
 
 > Full interactive documentation available at **http://localhost:3000/docs.html**
 
-### Messaging
+### Authentication
 
-| Method | Endpoint                  | Description                    |
-| ------ | ------------------------- | ------------------------------ |
-| `POST` | `/api/send-message`       | Send message to a phone number |
-| `POST` | `/api/send-group-message` | Send message to a group        |
-| `GET`  | `/api/messages`           | Get recent message log         |
+| Method | Endpoint         | Description                  |
+| ------ | ---------------- | ---------------------------- |
+| `POST` | `/auth/register` | Create new dashboard account |
+| `POST` | `/auth/login`    | Log in to the dashboard      |
 
-### Groups
+### WhatsApp Interaction
 
-| Method | Endpoint            | Description                 |
-| ------ | ------------------- | --------------------------- |
-| `GET`  | `/api/groups`       | List all joined groups      |
-| `POST` | `/api/join-group`   | Join group via invite link  |
-| `POST` | `/api/leave-group`  | Leave a group               |
-| `POST` | `/api/add-to-group` | Add participants to a group |
+_Note: All `/api/*` endpoints require a Bearer token or `wa_token` cookie._
 
-### Webhooks
-
-| Method   | Endpoint                | Description              |
-| -------- | ----------------------- | ------------------------ |
-| `GET`    | `/api/hooks`            | List registered webhooks |
-| `POST`   | `/api/hooks/register`   | Register a webhook URL   |
-| `DELETE` | `/api/hooks/unregister` | Remove a webhook         |
-
-### System
-
-| Method | Endpoint      | Description                     |
-| ------ | ------------- | ------------------------------- |
-| `GET`  | `/api/status` | Bot connection status + QR code |
-| `GET`  | `/api/stats`  | Dashboard statistics            |
+| Method   | Endpoint                  | Description                     |
+| -------- | ------------------------- | ------------------------------- |
+| `POST`   | `/api/send-message`       | Send message to a phone number  |
+| `POST`   | `/api/send-group-message` | Send message to a group         |
+| `GET`    | `/api/messages`           | Get recent message log          |
+| `GET`    | `/api/groups`             | List all joined groups          |
+| `POST`   | `/api/join-group`         | Join group via invite link      |
+| `POST`   | `/api/leave-group`        | Leave a group                   |
+| `POST`   | `/api/add-to-group`       | Add participants to a group     |
+| `GET`    | `/api/hooks`              | List registered webhooks        |
+| `POST`   | `/api/hooks/register`     | Register a webhook URL          |
+| `DELETE` | `/api/hooks/unregister`   | Remove a webhook                |
+| `GET`    | `/api/status`             | Bot connection status + QR code |
+| `POST`   | `/api/reconnect`          | Disconnect/Restart connection   |
 
 ### Example: Send a Message
 
 ```bash
 curl -X POST http://localhost:3000/api/send-message \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
     "number": "254712345678",
-    "message": "Hello from the bot! 🤖"
+    "message": "Hello from the new Go bot! 🤖"
   }'
 ```
 
-### Example: Register a Webhook
-
-```bash
-curl -X POST http://localhost:3000/api/hooks/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://your-app.com/webhook",
-    "name": "My App"
-  }'
-```
-
-**Webhook payload** (POSTed to your URL on each incoming message):
-
-```json
-{
-  "id": "false_254712345678@c.us_3EB0...",
-  "from": "254712345678@c.us",
-  "body": "Hello!",
-  "timestamp": "2026-02-21T12:00:00.000Z",
-  "type": "received",
-  "contactName": "John",
-  "isGroup": false
-}
-```
+---
 
 ## 📁 Project Structure
 
 ```
 wa-server/
-├── index.js                 # Express server
-├── wa-client.js             # WhatsApp client wrapper
-├── db.js                    # JSON persistence layer
-├── data.json                # Auto-generated data store
-├── routes/
-│   ├── api.js               # REST API endpoints
-│   └── hooks.js             # Webhook management
+├── main.go                  # Fiber web server entrypoint
+├── storage/
+│   ├── auth.go              # User registration, bcrypt, and OTP handling
+│   └── store.go             # JSON persistence handling (`data/users`)
+├── whatsapp/
+│   └── client.go            # whatsmeow client encapsulation, SQLite, & events
+├── nicks.toml               # Railway Go deployment configuration
+├── .github/workflows/       # Automated CI build runner
 └── public/
     ├── index.html           # Dashboard UI
     ├── docs.html            # API documentation page
     ├── style.css            # Dark glassmorphism theme
     └── app.js               # Client-side JavaScript
 ```
-
----
-
-## 🛠️ Scripts
-
-| Command         | Description           |
-| --------------- | --------------------- |
-| `bun run start` | Start the server      |
-| `bun run dev`   | Start with hot reload |
-
----
-
-## 🔧 Configuration
-
-The server stores its configuration in `data.json`, which includes:
-
-- **config** — Server port and settings
-- **messages** — Message log (capped at 500)
-- **webhooks** — Registered webhook URLs
-- **stats** — Message counts, group joins/leaves
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ---
 
@@ -189,6 +150,6 @@ This project is licensed under the ISC License.
 
 <div align="center">
 
-**Built with ❤️ using Bun + Express + whatsapp-web.js**
+**Built with ❤️ using Go + Fiber + whatsmeow**
 
 </div>
