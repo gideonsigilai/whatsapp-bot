@@ -834,22 +834,572 @@ function escHtml(str) {
   return div.innerHTML;
 }
 
+// ── Realtime WebSocket ──
+let realtimeSocket = null;
+let realtimeReconnectTimer = null;
+let realtimeShouldRun = false;
+
+function realtimeUrl() {
+  const base = getApiBase();
+  const wsBase = base.replace(/^http/i, 'ws');
+  return `${wsBase}/ws?token=${encodeURIComponent(authToken || '')}`;
+}
+
+function connectRealtime() {
+  realtimeShouldRun = true;
+  if (!authToken) return;
+  // Avoid duplicate sockets
+  if (realtimeSocket && (realtimeSocket.readyState === WebSocket.OPEN || realtimeSocket.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  setWsState('connecting');
+  let socket;
+  try {
+    socket = new WebSocket(realtimeUrl());
+  } catch {
+    scheduleRealtimeReconnect();
+    return;
+  }
+  realtimeSocket = socket;
+
+  socket.onopen = () => setWsState('connected');
+
+  socket.onmessage = (ev) => {
+    let msg;
+    try {
+      msg = JSON.parse(ev.data);
+    } catch {
+      return;
+    }
+    handleRealtimeEvent(msg.event, msg.data);
+  };
+
+  socket.onclose = () => {
+    if (realtimeSocket === socket) realtimeSocket = null;
+    setWsState('disconnected');
+    if (realtimeShouldRun) scheduleRealtimeReconnect();
+  };
+
+  socket.onerror = () => {
+    try { socket.close(); } catch {}
+  };
+}
+
+function scheduleRealtimeReconnect() {
+  if (!realtimeShouldRun || realtimeReconnectTimer) return;
+  realtimeReconnectTimer = setTimeout(() => {
+    realtimeReconnectTimer = null;
+    connectRealtime();
+  }, 3000);
+}
+
+function disconnectRealtime() {
+  realtimeShouldRun = false;
+  if (realtimeReconnectTimer) {
+    clearTimeout(realtimeReconnectTimer);
+    realtimeReconnectTimer = null;
+  }
+  if (realtimeSocket) {
+    try { realtimeSocket.close(); } catch {}
+    realtimeSocket = null;
+  }
+}
+
+function handleRealtimeEvent(event, data) {
+  pushActivity(event, data);
+  switch (event) {
+    case 'status':
+    case 'pair_success':
+      // Re-render connection status immediately (QR, pairing code, ready, ...)
+      pollStatus();
+      break;
+    case 'message':
+      refreshMessages();
+      pollStats();
+      if (document.getElementById('expInbox')?.classList.contains('active')) {
+        loadInbox();
+      }
+      if (data && data.hasMedia && document.getElementById('expMedia')?.classList.contains('active')) {
+        loadMedia();
+      }
+      if (data && data.type === 'received') {
+        const who = data.contactName || data.from || 'Someone';
+        toast(`New message from ${who}`, 'info');
+      }
+      break;
+    case 'joined_group':
+    case 'group_info':
+      refreshGroups();
+      break;
+    default:
+      // receipt / presence / chat_presence / picture / call — shown in Live Activity
+      break;
+  }
+}
+
+// ── Explore: tab switching ──
+function switchExploreTab(btn, tabId) {
+  const container = document.getElementById('exploreSection');
+  container.querySelectorAll('.explore-tab-btn').forEach((b) => {
+    b.classList.remove('active', 'border-neutral-900', 'dark:border-white', 'text-neutral-900', 'dark:text-white');
+    b.classList.add('border-transparent', 'text-neutral-400');
+  });
+  container.querySelectorAll('.explore-tab-content').forEach((t) => {
+    t.classList.remove('active');
+    t.style.display = 'none';
+  });
+  btn.classList.add('active', 'border-neutral-900', 'dark:border-white', 'text-neutral-900', 'dark:text-white');
+  btn.classList.remove('border-transparent', 'text-neutral-400');
+  const target = document.getElementById(tabId);
+  target.classList.add('active');
+  target.style.display = '';
+
+  // Lazy-load content when a tab is first opened
+  if (tabId === 'expInbox') loadInbox();
+  if (tabId === 'expMedia') loadMedia();
+  if (tabId === 'expContacts' && !contactsLoadedOnce) loadContacts();
+}
+
+// ── Inbox (conversation list) ──
+let inboxCache = [];
+let currentConv = null;
+
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  return d.toLocaleDateString();
+}
+
+async function loadInbox() {
+  const list = document.getElementById('inboxList');
+  if (!list) return;
+  list.innerHTML = '<div class="text-neutral-400 py-6 text-center text-sm">Loading…</div>';
+  const enrich = document.getElementById('inboxEnrich')?.checked;
+  try {
+    const data = await api(`/inbox?limit=100${enrich ? '&enrich=true' : ''}`);
+    const convs = data.result || data || [];
+    inboxCache = convs;
+    if (!convs.length) {
+      list.innerHTML = '<div class="text-neutral-400 py-8 text-center text-sm">No conversations yet — messages you send or receive will appear here.</div>';
+      return;
+    }
+    list.innerHTML = convs
+      .map((c, i) => {
+        const lm = c.lastMessage || {};
+        const avatar = c.profilePicture
+          ? `<img src="${c.profilePicture}" class="w-10 h-10 rounded-full object-cover flex-shrink-0" />`
+          : `<div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 flex-shrink-0"><span class="material-symbols-outlined text-[20px]">${c.isGroup ? 'group' : 'person'}</span></div>`;
+        return `<div class="flex items-center gap-3 p-2.5 rounded hover:bg-neutral-50 dark:hover:bg-neutral-900 cursor-pointer" onclick="openConversation(${i})">
+          ${avatar}
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between gap-2">
+              <p class="text-sm font-medium text-neutral-900 dark:text-white truncate">${escHtml(c.name)}</p>
+              <span class="text-[11px] text-neutral-400 whitespace-nowrap">${fmtTime(lm.timestamp)}</span>
+            </div>
+            <p class="text-xs text-neutral-400 truncate">${lm.fromMe ? 'You: ' : ''}${escHtml(lm.body || '')}</p>
+          </div>
+        </div>`;
+      })
+      .join('');
+  } catch (err) {
+    list.innerHTML = `<div class="text-red-500 py-6 text-center text-sm">${escHtml(err.message)}</div>`;
+  }
+}
+
+async function openConversation(idx) {
+  const c = inboxCache[idx];
+  if (!c) return;
+  currentConv = { chat: c.chat, name: c.name, isGroup: c.isGroup, actions: [] };
+  const detail = document.getElementById('conversationDetail');
+  detail.innerHTML = '<div class="text-neutral-400 py-6 text-center text-sm">Loading…</div>';
+  try {
+    const [msgsRes, actsRes] = await Promise.all([
+      api(`/conversation?chat=${encodeURIComponent(c.chat)}&limit=50`),
+      api(`/conversation/actions?chat=${encodeURIComponent(c.chat)}`),
+    ]);
+    const msgs = msgsRes.result || msgsRes || [];
+    currentConv.actions = (actsRes.result || actsRes || {}).actions || [];
+
+    const msgsHtml = msgs
+      .map(
+        (m) => `<div class="flex ${m.type === 'sent' ? 'justify-end' : 'justify-start'}">
+          <div class="max-w-[80%] px-3 py-1.5 rounded text-xs ${m.type === 'sent' ? 'bg-green-100 dark:bg-green-900/40' : 'bg-neutral-100 dark:bg-neutral-800'}">
+            ${escHtml(m.body || '')}
+            <div class="text-[10px] text-neutral-400 mt-0.5">${fmtTime(m.timestamp)}</div>
+          </div>
+        </div>`
+      )
+      .join('');
+
+    const actsHtml = currentConv.actions
+      .map(
+        (a, i) =>
+          `<button class="px-2.5 py-1 rounded border border-neutral-200 dark:border-neutral-700 text-xs hover:bg-neutral-50 dark:hover:bg-neutral-900" onclick="convAction(${i})">${escHtml(a.label)}</button>`
+      )
+      .join('');
+
+    detail.innerHTML = `<div class="flex items-center justify-between mb-2 gap-2">
+        <p class="text-sm font-semibold text-neutral-900 dark:text-white truncate">${escHtml(c.name)}</p>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 whitespace-nowrap">${c.isGroup ? 'group' : 'contact'}</span>
+      </div>
+      ${c.about ? `<p class="text-xs text-neutral-400 mb-2">${escHtml(c.about)}</p>` : ''}
+      <div class="flex flex-wrap gap-1.5 mb-3">${actsHtml}</div>
+      <div class="space-y-1.5 max-h-[300px] overflow-y-auto">${msgsHtml || '<p class="text-xs text-neutral-400 text-center py-4">No messages stored for this conversation</p>'}</div>`;
+  } catch (err) {
+    detail.innerHTML = `<div class="text-red-500 py-6 text-center text-sm">${escHtml(err.message)}</div>`;
+  }
+}
+
+async function convAction(idx) {
+  if (!currentConv) return;
+  const a = currentConv.actions[idx];
+  if (!a) return;
+  const body = { chat: currentConv.chat, action: a.id };
+  for (const p of a.params || []) {
+    if (p === 'participants') {
+      const v = prompt('Participants (comma-separated phone numbers):');
+      if (v === null) return;
+      body.participants = v.split(',').map((s) => s.trim()).filter(Boolean);
+    } else if (p === 'announce' || p === 'locked' || p === 'reset') {
+      body[p] = confirm(`Set "${p}" to true?  (OK = true, Cancel = false)`);
+    } else if (p === 'image') {
+      const v = prompt('Image URL, data URI or base64:');
+      if (v === null) return;
+      body.image = v;
+    } else {
+      const v = prompt(`Enter ${p}:`);
+      if (v === null) return;
+      body[p] = v;
+    }
+  }
+  if (a.id === 'exit' && !confirm('Leave this group?')) return;
+  try {
+    const res = await api('/conversation/action', { method: 'POST', body: JSON.stringify(body) });
+    toast(`${a.label} ✓`, 'success');
+    if (a.id === 'invite_link') {
+      const link = (res.result || {}).result?.link || (res.result || {}).link;
+      if (link) prompt('Invite link:', link);
+    }
+    if (a.id === 'exit' || a.id === 'leave') {
+      document.getElementById('conversationDetail').innerHTML =
+        '<div class="text-neutral-400 py-8 text-center text-sm">Left the group</div>';
+      loadInbox();
+    }
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+// ── Live Activity feed ──
+let activityEntries = [];
+let contactsLoadedOnce = false;
+
+function setWsState(state) {
+  const el = document.getElementById('wsState');
+  if (!el) return;
+  const map = {
+    connected: ['live ●', '#31cb00'],
+    disconnected: ['offline ●', '#e63946'],
+    connecting: ['connecting…', '#f1d302'],
+  };
+  const [label, color] = map[state] || map.connecting;
+  el.textContent = label;
+  el.style.color = color;
+}
+
+function activitySummary(event, data) {
+  try {
+    switch (event) {
+      case 'message':
+        return `${data.type === 'sent' ? '→' : '←'} ${data.contactName || data.from || ''}: ${data.body || ''}`;
+      case 'status':
+        return `connection: ${data.status}${data.info?.pushname ? ' (' + data.info.pushname + ')' : ''}`;
+      case 'receipt':
+        return `receipt ${data.type || 'delivered'} from ${data.sender || data.chat}`;
+      case 'presence':
+        return `${data.from} is ${data.unavailable ? 'offline' : 'online'}`;
+      case 'chat_presence':
+        return `${data.sender} ${data.state}${data.media === 'audio' ? ' (audio)' : ''}`;
+      case 'picture':
+        return `${data.jid} ${data.removed ? 'removed' : 'changed'} picture`;
+      case 'group_info':
+        return `group ${data.jid} updated`;
+      case 'joined_group':
+        return `joined group ${data.name || data.jid || ''}`;
+      case 'call':
+        return `call from ${data.from}`;
+      case 'pair_success':
+        return `paired as ${data.jid}`;
+      default:
+        return JSON.stringify(data);
+    }
+  } catch {
+    return event;
+  }
+}
+
+function pushActivity(event, data) {
+  const time = new Date().toLocaleTimeString();
+  activityEntries.unshift({ time, event, text: activitySummary(event, data || {}) });
+  if (activityEntries.length > 100) activityEntries.pop();
+  renderActivity();
+}
+
+function renderActivity() {
+  const box = document.getElementById('activityLog');
+  if (!box) return;
+  if (!activityEntries.length) {
+    box.innerHTML = '<div class="text-neutral-400 dark:text-neutral-600 py-8 text-center">Waiting for live events…</div>';
+    return;
+  }
+  const colors = {
+    message: '#31cb00', status: '#3a86ff', receipt: '#8d99ae', presence: '#f1d302',
+    chat_presence: '#f1d302', call: '#e63946', picture: '#9b5de5', group_info: '#00bbf9',
+    joined_group: '#00bbf9', pair_success: '#31cb00',
+  };
+  box.innerHTML = activityEntries
+    .map(
+      (e) => `<div class="flex gap-2 py-1 border-b border-border-light dark:border-border-dark/50">
+        <span class="text-neutral-400 dark:text-neutral-600">${escHtml(e.time)}</span>
+        <span class="font-semibold" style="color:${colors[e.event] || '#8d99ae'}">${escHtml(e.event)}</span>
+        <span class="text-neutral-600 dark:text-neutral-300 truncate">${escHtml(e.text)}</span>
+      </div>`
+    )
+    .join('');
+}
+
+function clearActivity() {
+  activityEntries = [];
+  renderActivity();
+}
+
+// ── Media ──
+async function loadMedia() {
+  const list = document.getElementById('mediaList');
+  if (!list) return;
+  try {
+    const msgs = await api('/messages?limit=200');
+    const media = (msgs || []).filter((m) => m.hasMedia);
+    if (!media.length) {
+      list.innerHTML = '<div class="text-neutral-400 dark:text-neutral-600 py-8 text-center text-sm">No media received yet</div>';
+      return;
+    }
+    const icon = { image: 'image', video: 'movie', audio: 'mic', document: 'description', sticker: 'sentiment_satisfied' };
+    list.innerHTML = media
+      .map(
+        (m) => `<div class="flex items-center gap-3 p-3 rounded border border-border-light dark:border-border-dark">
+          <span class="material-symbols-outlined text-neutral-400">${icon[m.mediaType] || 'attachment'}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-neutral-900 dark:text-white truncate">${escHtml(m.body || m.mediaType)}</p>
+            <p class="text-xs text-neutral-400 truncate">${escHtml(m.contactName || m.from || '')} · ${escHtml(m.mediaType)}</p>
+          </div>
+          <button class="px-3 py-1.5 rounded bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-medium" onclick="downloadMedia('${escHtml(m.id)}')">View / Download</button>
+        </div>`
+      )
+      .join('');
+  } catch (err) {
+    list.innerHTML = `<div class="text-red-500 py-6 text-center text-sm">${escHtml(err.message)}</div>`;
+  }
+}
+
+async function downloadMedia(messageId) {
+  const preview = document.getElementById('mediaPreview');
+  preview.innerHTML = '<div class="text-xs text-neutral-400 py-2">Downloading…</div>';
+  try {
+    const data = await api(`/download-media?messageId=${encodeURIComponent(messageId)}`);
+    const r = data.result || data;
+    let body = '';
+    if (r.mediaType === 'image' || r.mediaType === 'sticker') {
+      body = `<img src="${r.dataUri}" class="max-h-64 rounded border border-border-light dark:border-border-dark" />`;
+    } else if (r.mediaType === 'video') {
+      body = `<video src="${r.dataUri}" controls class="max-h-64 rounded"></video>`;
+    } else if (r.mediaType === 'audio') {
+      body = `<audio src="${r.dataUri}" controls></audio>`;
+    }
+    preview.innerHTML = `<div class="p-3 rounded border border-border-light dark:border-border-dark">
+      ${body}
+      <div class="mt-2 flex items-center gap-3">
+        <a href="${r.dataUri}" download="${escHtml(r.filename)}" class="text-xs px-3 py-1.5 rounded bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-medium">Download ${escHtml(r.filename)}</a>
+        <span class="text-xs text-neutral-400">${escHtml(r.mimetype)} · ${(r.size / 1024).toFixed(1)} KB</span>
+      </div>
+    </div>`;
+  } catch (err) {
+    preview.innerHTML = `<div class="text-red-500 text-sm py-2">${escHtml(err.message)}</div>`;
+    toast(err.message, 'error');
+  }
+}
+
+// ── Contacts ──
+async function loadContacts() {
+  const list = document.getElementById('contactsList');
+  if (!list) return;
+  list.innerHTML = '<div class="text-neutral-400 py-6 text-center text-sm">Loading…</div>';
+  try {
+    const data = await api('/contacts');
+    const contacts = (data.result || data || []).filter((c) => c.fullName || c.pushName || c.firstName);
+    contactsLoadedOnce = true;
+    if (!contacts.length) {
+      list.innerHTML = '<div class="text-neutral-400 py-6 text-center text-sm">No contacts found</div>';
+      return;
+    }
+    list.innerHTML = contacts
+      .map(
+        (c) => `<div class="flex items-center justify-between p-2.5 rounded hover:bg-neutral-50 dark:hover:bg-neutral-900">
+          <div class="min-w-0">
+            <p class="text-sm text-neutral-900 dark:text-white truncate">${escHtml(c.fullName || c.pushName || c.firstName || 'Unknown')}</p>
+            <p class="text-xs text-neutral-400 font-mono truncate">${escHtml((c.jid || '').split('@')[0])}</p>
+          </div>
+          ${c.businessName ? '<span class="text-[10px] px-2 py-0.5 rounded bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">business</span>' : ''}
+        </div>`
+      )
+      .join('');
+  } catch (err) {
+    list.innerHTML = `<div class="text-red-500 py-6 text-center text-sm">${escHtml(err.message)}</div>`;
+  }
+}
+
+// ── User lookup ──
+function renderLookup(title, obj) {
+  const box = document.getElementById('lookupResult');
+  box.innerHTML = `<div class="p-4 rounded border border-border-light dark:border-border-dark">
+    <p class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">${escHtml(title)}</p>
+    <pre class="text-xs overflow-x-auto whitespace-pre-wrap break-words text-neutral-700 dark:text-neutral-300">${escHtml(JSON.stringify(obj, null, 2))}</pre>
+  </div>`;
+}
+
+function lookupTarget() {
+  const v = document.getElementById('lookupInput').value.trim();
+  if (!v) toast('Enter a phone number or JID', 'error');
+  return v;
+}
+
+async function lookupCheck() {
+  const t = lookupTarget();
+  if (!t) return;
+  try {
+    const data = await api('/check-number', { method: 'POST', body: JSON.stringify({ numbers: [t] }) });
+    renderLookup('On WhatsApp', data.result || data);
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function lookupInfo() {
+  const t = lookupTarget();
+  if (!t) return;
+  try {
+    const data = await api(`/user-info?jids=${encodeURIComponent(t)}`);
+    renderLookup('User info', data.result || data);
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function lookupPicture() {
+  const t = lookupTarget();
+  if (!t) return;
+  try {
+    const data = await api(`/profile-picture?jid=${encodeURIComponent(t)}`);
+    const r = data.result || data;
+    const box = document.getElementById('lookupResult');
+    box.innerHTML = r.url
+      ? `<div class="p-4 rounded border border-border-light dark:border-border-dark text-center">
+           <img src="${r.url}" class="w-32 h-32 rounded-full mx-auto object-cover" />
+           <p class="text-xs text-neutral-400 mt-2">${escHtml(r.jid || '')}</p>
+         </div>`
+      : '<div class="p-4 text-sm text-neutral-400">No profile picture available (or hidden by privacy settings).</div>';
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function lookupBusiness() {
+  const t = lookupTarget();
+  if (!t) return;
+  try {
+    const data = await api(`/business-profile?jid=${encodeURIComponent(t)}`);
+    renderLookup('Business profile', data.result || data || 'Not a business account');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+// ── Misc ──
+function showMiscOutput(obj) {
+  const el = document.getElementById('miscOutput');
+  el.classList.remove('hidden');
+  el.textContent = JSON.stringify(obj, null, 2);
+}
+
+async function miscSetStatus() {
+  const status = document.getElementById('miscStatus').value;
+  try {
+    await api('/set-status', { method: 'POST', body: JSON.stringify({ status }) });
+    toast('Status updated', 'success');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function miscPresence(presence) {
+  try {
+    await api('/presence', { method: 'POST', body: JSON.stringify({ presence }) });
+    toast(`Presence set to ${presence}`, 'success');
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function miscBlock(block) {
+  const jid = document.getElementById('miscBlockJid').value.trim();
+  if (!jid) return toast('Enter a number or JID', 'error');
+  try {
+    await api(block ? '/block' : '/unblock', { method: 'POST', body: JSON.stringify({ jid }) });
+    toast(block ? 'User blocked' : 'User unblocked', 'success');
+    miscLoadBlocklist();
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function miscLoadBlocklist() {
+  try {
+    const data = await api('/blocklist');
+    const r = data.result || data;
+    const blocked = r.blocked || [];
+    document.getElementById('miscBlocklist').textContent = blocked.length
+      ? `Blocked: ${blocked.map((j) => j.split('@')[0]).join(', ')}`
+      : 'No blocked users';
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function miscPrivacy() {
+  try {
+    const data = await api('/privacy-settings');
+    showMiscOutput(data.result || data);
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function miscNewsletters() {
+  try {
+    const data = await api('/newsletters');
+    showMiscOutput(data.result || data);
+  } catch (err) { toast(err.message, 'error'); }
+}
+
 // ── Polling Control ──
+// Polling stays as a safety net; the websocket above drives instant updates, so
+// the intervals can be relaxed.
 function startPolling() {
   stopPolling(); // clear any existing intervals
   pollStatus();
   pollStats();
   refreshMessages();
   refreshHooks();
-  pollingIntervals.push(setInterval(pollStatus, 15000));
-  pollingIntervals.push(setInterval(pollStats, 30000));
-  pollingIntervals.push(setInterval(refreshMessages, 15000));
+  loadInbox();
+  connectRealtime();
+  pollingIntervals.push(setInterval(pollStatus, 30000));
+  pollingIntervals.push(setInterval(pollStats, 60000));
+  pollingIntervals.push(setInterval(refreshMessages, 30000));
   pollingIntervals.push(setInterval(refreshHooks, 60000));
 }
 
 function stopPolling() {
   pollingIntervals.forEach((id) => clearInterval(id));
   pollingIntervals = [];
+  disconnectRealtime();
 }
 
 // ── Init ──

@@ -12,6 +12,7 @@ import (
 	"wa-server-go/storage"
 	"wa-server-go/whatsapp"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -57,6 +58,33 @@ func main() {
 		Format: "[${time}] ${method} ${path} - ${status} - ${latency}\n",
 	}))
 	app.Use(cors.New())
+
+	// ── Realtime WebSocket ──
+	// Authenticate the upgrade request (Bearer header, ?token= query, or wa_token
+	// cookie) and stash the user id for the socket handler.
+	app.Use("/ws", func(c *fiber.Ctx) error {
+		if !websocket.IsWebSocketUpgrade(c) {
+			return fiber.ErrUpgradeRequired
+		}
+		var token string
+		if authHeader := c.Get("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+		if token == "" {
+			token = c.Query("token")
+		}
+		if token == "" {
+			token = c.Cookies("wa_token")
+		}
+		user := storage.FindUserByToken(token)
+		if user == nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+		c.Locals("userId", user.ID)
+		c.Locals("userEmail", user.Email)
+		return c.Next()
+	})
+	app.Get("/ws", websocket.New(whatsapp.ServeWS))
 
 	// Serve Static Files
 	app.Static("/", "./public")
@@ -169,14 +197,7 @@ func main() {
 
 	api.Get("/status", func(c *fiber.Ctx) error {
 		userId := c.Locals("userId").(string)
-		uc := whatsapp.GetUserClient(userId)
-		return c.JSON(fiber.Map{
-			"status":      uc.ConnectionStatus,
-			"pairingCode": uc.PairingCode,
-			"qr":          uc.QRCodeData,
-			"info":        uc.ClientInfo,
-			"error":       uc.LastError,
-		})
+		return c.JSON(whatsapp.GetStatus(userId))
 	})
 
 	api.Get("/stats", func(c *fiber.Ctx) error {
@@ -399,12 +420,19 @@ func main() {
 		return c.JSON(fiber.Map{"success": true, "message": "Reconnecting via " + method + "..."})
 	})
 
+	// ── Extended WhatsApp API surface ──
+	registerMessagingRoutes(api)
+	registerGroupRoutes(api)
+	registerContactRoutes(api)
+	registerNewsletterRoutes(api)
+	registerInboxRoutes(api)
+
 	config := storage.GetGlobalConfig()
 	port := config.Config.Port
 	if port == 0 {
 		port = 3000
 	}
-	
+
 	if envPort := os.Getenv("PORT"); envPort != "" {
 		if p, err := strconv.Atoi(envPort); err == nil {
 			port = p

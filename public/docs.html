@@ -108,6 +108,16 @@
           <li class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 px-3 pt-4 pb-2">System</li>
           <li><a href="#get-status" class="block px-3 py-2 rounded text-neutral-400 no-underline">📡 Bot Status</a></li>
           <li><a href="#get-stats" class="block px-3 py-2 rounded text-neutral-400 no-underline">📊 Statistics</a></li>
+
+          <li class="text-[11px] font-semibold uppercase tracking-wider text-neutral-600 px-3 pt-4 pb-2">Extended API</li>
+          <li><a href="#ext-inbox" class="block px-3 py-2 rounded text-neutral-400 no-underline">📥 Inbox &amp; Conversations</a></li>
+          <li><a href="#ext-media" class="block px-3 py-2 rounded text-neutral-400 no-underline">📎 Media &amp; Rich Messages</a></li>
+          <li><a href="#ext-actions" class="block px-3 py-2 rounded text-neutral-400 no-underline">✏️ Message Actions</a></li>
+          <li><a href="#ext-groups" class="block px-3 py-2 rounded text-neutral-400 no-underline">👥 Group Management</a></li>
+          <li><a href="#ext-contacts" class="block px-3 py-2 rounded text-neutral-400 no-underline">📇 Contacts &amp; Profile</a></li>
+          <li><a href="#ext-channels" class="block px-3 py-2 rounded text-neutral-400 no-underline">📰 Channels</a></li>
+          <li><a href="#ext-download" class="block px-3 py-2 rounded text-neutral-400 no-underline">⬇️ Download Media</a></li>
+          <li><a href="#ext-websocket" class="block px-3 py-2 rounded text-neutral-400 no-underline">🔌 Realtime WebSocket</a></li>
         </ul>
       </nav>
     </aside>
@@ -550,12 +560,145 @@
         </div>
       </div>
 
+      <!-- ═══════════ EXTENDED API ═══════════ -->
+      <style>
+        .bdg{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;font-family:monospace;border:1px solid;white-space:nowrap}
+        .bdg-get{background:rgba(30,58,138,.25);color:#60a5fa;border-color:rgba(30,64,175,.4)}
+        .bdg-post{background:rgba(20,83,45,.25);color:#4ade80;border-color:rgba(22,101,52,.4)}
+        .bdg-del{background:rgba(127,29,29,.25);color:#f87171;border-color:rgba(153,27,27,.4)}
+        .ext-tbl{width:100%;border-collapse:collapse;font-size:13px}
+        .ext-tbl td{padding:9px 16px;vertical-align:top;color:#d4d4d4}
+        .ext-tbl tr+tr td{border-top:1px solid #1f1f1f}
+        .ext-tbl code{color:#e5e5e5;background:#1f1f1f;padding:1px 5px;border-radius:3px;font-size:11px;font-family:monospace}
+        .ext-wrap{overflow-x:auto;border:1px solid #262626;border-radius:6px;margin-bottom:1rem}
+      </style>
+
+      <section id="ext-inbox" class="mb-10 pt-4">
+        <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">📥 Inbox &amp; Conversations</h2>
+        <p class="text-neutral-400 text-sm mb-4">A WhatsApp/email-style view built from the message log: messages are grouped by conversation, with each conversation's most recent message surfaced, newest first. <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">chat</code> is a contact or group JID (e.g. <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">12345@s.whatsapp.net</code> or <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">12345-67890@g.us</code>).</p>
+        <div class="ext-wrap"><table class="ext-tbl">
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/inbox</code></td><td class="text-neutral-400"><code>?enrich=true&amp;limit=</code> — conversation list + last message; <code>enrich</code> adds profile picture, name &amp; about/topic</td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/conversation</code></td><td class="text-neutral-400"><code>?chat=&amp;limit=</code> — messages of one conversation (oldest first)</td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/conversation/actions</code></td><td class="text-neutral-400"><code>?chat=</code> — actions available for the contact/group</td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/conversation/action</code></td><td class="text-neutral-400"><code>chat</code>, <code>action</code>, &hellip;params</td></tr>
+        </table></div>
+        <p class="text-neutral-400 text-sm mb-2"><strong class="text-neutral-300">Actions</strong> — contacts: <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">block</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">unblock</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">subscribe_presence</code>. Groups: <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">exit</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">set_name</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">set_description</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">set_photo</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">announce</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">lock</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">invite_link</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">add</code>/<code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">remove</code>/<code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">promote</code>/<code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">demote</code>.</p>
+        <pre class="bg-neutral-900 border border-neutral-800 rounded p-4 text-xs overflow-x-auto text-neutral-300"><span class="text-green-400">curl</span> -X POST http://localhost:3000/api/conversation/action \
+  -H <span class="text-amber-300">"Authorization: Bearer YOUR_TOKEN"</span> -H <span class="text-amber-300">"Content-Type: application/json"</span> \
+  -d <span class="text-amber-300">'{"chat":"12345-67890@g.us","action":"set_name","name":"New group name"}'</span></pre>
+        <p class="text-neutral-500 text-xs mt-3">Realtime new messages still arrive over the <a href="#ext-websocket" class="text-neutral-300 underline">WebSocket</a> (<code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">message</code> events); these endpoints serve the cached history and the conversation list.</p>
+      </section>
+
+      <section id="ext-media" class="mb-10 pt-4">
+        <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">📎 Media &amp; Rich Messages</h2>
+        <p class="text-neutral-400 text-sm mb-4">Media fields (<code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">image/video/audio/...</code>) accept an <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">https://</code> URL, a <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">data:</code> URI, or a raw base64 string. <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">to</code> accepts a phone number or a full JID.</p>
+        <div class="ext-wrap"><table class="ext-tbl">
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/send-image</code></td><td class="text-neutral-400"><code>to</code>, <code>image</code>, <code>caption</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/send-video</code></td><td class="text-neutral-400"><code>to</code>, <code>video</code>, <code>caption</code>, <code>gifPlayback</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/send-audio</code></td><td class="text-neutral-400"><code>to</code>, <code>audio</code>, <code>ptt</code> (voice note)</td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/send-document</code></td><td class="text-neutral-400"><code>to</code>, <code>document</code>, <code>filename</code>, <code>caption</code>, <code>mimetype</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/send-sticker</code></td><td class="text-neutral-400"><code>to</code>, <code>sticker</code> (WebP)</td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/send-location</code></td><td class="text-neutral-400"><code>to</code>, <code>latitude</code>, <code>longitude</code>, <code>name</code>, <code>address</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/send-contact</code></td><td class="text-neutral-400"><code>to</code>, <code>displayName</code>, <code>phone</code> <em>or</em> <code>vcard</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/send-poll</code></td><td class="text-neutral-400"><code>to</code>, <code>name</code>, <code>options[]</code>, <code>selectableCount</code></td></tr>
+        </table></div>
+        <pre class="bg-neutral-900 border border-neutral-800 rounded p-4 text-xs overflow-x-auto text-neutral-300"><span class="text-green-400">curl</span> -X POST http://localhost:3000/api/send-image \
+  -H <span class="text-amber-300">"Authorization: Bearer YOUR_TOKEN"</span> -H <span class="text-amber-300">"Content-Type: application/json"</span> \
+  -d <span class="text-amber-300">'{"to":"254712345678","image":"https://picsum.photos/600","caption":"Hi 👋"}'</span></pre>
+      </section>
+
+      <section id="ext-actions" class="mb-10">
+        <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">✏️ Message Actions &amp; Presence</h2>
+        <p class="text-neutral-400 text-sm mb-4">For reactions / deletes on someone else's message, pass <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">participant</code> (group sender) and <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">fromMe:false</code>.</p>
+        <div class="ext-wrap"><table class="ext-tbl">
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/reply-message</code></td><td class="text-neutral-400"><code>to</code>, <code>messageId</code>, <code>participant</code>, <code>text</code>, <code>quotedText</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/send-reaction</code></td><td class="text-neutral-400"><code>to</code>, <code>messageId</code>, <code>emoji</code>, <code>fromMe</code> (empty emoji removes)</td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/edit-message</code></td><td class="text-neutral-400"><code>to</code>, <code>messageId</code>, <code>newText</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/revoke-message</code></td><td class="text-neutral-400"><code>to</code>, <code>messageId</code>, <code>participant</code>, <code>fromMe</code> (delete for everyone)</td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/mark-read</code></td><td class="text-neutral-400"><code>chat</code>, <code>sender</code>, <code>messageIds[]</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/presence</code></td><td class="text-neutral-400"><code>presence</code>: <code>available</code> / <code>unavailable</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/chat-presence</code></td><td class="text-neutral-400"><code>to</code>, <code>state</code>: <code>composing</code>/<code>paused</code>, <code>media</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/subscribe-presence</code></td><td class="text-neutral-400"><code>jid</code></td></tr>
+        </table></div>
+      </section>
+
+      <section id="ext-groups" class="mb-10">
+        <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">👥 Group &amp; Community Management</h2>
+        <div class="ext-wrap"><table class="ext-tbl">
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/group-info</code></td><td class="text-neutral-400"><code>?groupId=</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/create-group</code></td><td class="text-neutral-400"><code>name</code>, <code>participants[]</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/participants</code></td><td class="text-neutral-400"><code>groupId</code>, <code>action</code> (add/remove/promote/demote), <code>participants[]</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/name</code></td><td class="text-neutral-400"><code>groupId</code>, <code>name</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/topic</code></td><td class="text-neutral-400"><code>groupId</code>, <code>topic</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/photo</code></td><td class="text-neutral-400"><code>groupId</code>, <code>image</code> (empty removes)</td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/announce</code></td><td class="text-neutral-400"><code>groupId</code>, <code>announce</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/locked</code></td><td class="text-neutral-400"><code>groupId</code>, <code>locked</code></td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/group/invite-link</code></td><td class="text-neutral-400"><code>?groupId=&amp;reset=</code></td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/group/info-from-link</code></td><td class="text-neutral-400"><code>?link=</code></td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/group/join-requests</code></td><td class="text-neutral-400"><code>?groupId=</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/join-requests</code></td><td class="text-neutral-400"><code>groupId</code>, <code>action</code> (approve/reject), <code>participants[]</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/member-add-mode</code></td><td class="text-neutral-400"><code>groupId</code>, <code>mode</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/disappearing</code></td><td class="text-neutral-400"><code>groupId</code>, <code>seconds</code></td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/group/subgroups</code></td><td class="text-neutral-400"><code>?communityId=</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/group/link</code> · <code>/api/group/unlink</code></td><td class="text-neutral-400"><code>parent</code>, <code>child</code></td></tr>
+        </table></div>
+      </section>
+
+      <section id="ext-contacts" class="mb-10">
+        <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">📇 Contacts, Profile &amp; Privacy</h2>
+        <div class="ext-wrap"><table class="ext-tbl">
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/check-number</code></td><td class="text-neutral-400"><code>numbers[]</code> → is on WhatsApp</td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/user-info</code></td><td class="text-neutral-400"><code>?jids=</code> (csv) → status, picture id, devices</td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/profile-picture</code></td><td class="text-neutral-400"><code>?jid=&amp;preview=</code></td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/business-profile</code></td><td class="text-neutral-400"><code>?jid=</code></td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/user-devices</code></td><td class="text-neutral-400"><code>?jids=</code> (csv)</td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/contacts</code></td><td class="text-neutral-400">local contact cache</td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/blocklist</code></td><td class="text-neutral-400">list blocked users</td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/block</code> · <code>/api/unblock</code></td><td class="text-neutral-400"><code>jid</code></td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/privacy-settings</code></td><td class="text-neutral-400">read privacy settings</td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/set-status</code></td><td class="text-neutral-400"><code>status</code> (your "about" text)</td></tr>
+        </table></div>
+      </section>
+
+      <section id="ext-channels" class="mb-10">
+        <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">📰 Channels (Newsletters)</h2>
+        <div class="ext-wrap"><table class="ext-tbl">
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/newsletters</code></td><td class="text-neutral-400">followed channels</td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/newsletter/info</code></td><td class="text-neutral-400"><code>?jid=</code></td></tr>
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/newsletter/info-from-invite</code></td><td class="text-neutral-400"><code>?key=</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/newsletter/create</code></td><td class="text-neutral-400"><code>name</code>, <code>description</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/newsletter/follow</code> · <code>/unfollow</code></td><td class="text-neutral-400"><code>jid</code></td></tr>
+          <tr><td><span class="bdg bdg-post">POST</span></td><td><code>/api/newsletter/mute</code></td><td class="text-neutral-400"><code>jid</code>, <code>mute</code></td></tr>
+        </table></div>
+      </section>
+
+      <section id="ext-download" class="mb-10">
+        <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">⬇️ Download Media from Chats</h2>
+        <p class="text-neutral-400 text-sm mb-4">Incoming media (image/video/audio/document/sticker) is cached in memory as it arrives. Download it by message id; the response is a base64 <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">dataUri</code> you can preview or save. Only recently received media is available (cache is bounded and cleared on restart).</p>
+        <div class="ext-wrap"><table class="ext-tbl">
+          <tr><td><span class="bdg bdg-get">GET</span></td><td><code>/api/download-media</code></td><td class="text-neutral-400"><code>?messageId=</code> → <code>{ mediaType, mimetype, filename, size, dataUri }</code></td></tr>
+        </table></div>
+        <pre class="bg-neutral-900 border border-neutral-800 rounded p-4 text-xs overflow-x-auto text-neutral-300"><span class="text-green-400">curl</span> http://localhost:3000/api/download-media?messageId=ABCD1234 \
+  -H <span class="text-amber-300">"Authorization: Bearer YOUR_TOKEN"</span></pre>
+      </section>
+
+      <section id="ext-websocket" class="mb-10">
+        <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">🔌 Realtime WebSocket</h2>
+        <p class="text-neutral-400 text-sm mb-4">Connect to <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">/ws</code> for a live push stream instead of polling. Authenticate with a Bearer header, a <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">?token=</code> query param, or the <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">wa_token</code> cookie. Every frame is a JSON envelope <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">{ event, data, timestamp }</code>; a <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">status</code> snapshot is sent on connect.</p>
+        <p class="text-neutral-400 text-sm mb-4">Events: <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">status</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">pair_success</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">message</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">receipt</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">presence</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">chat_presence</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">group_info</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">joined_group</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">picture</code>, <code class="text-neutral-300 bg-neutral-800 px-1 py-0.5 rounded text-xs">call</code>.</p>
+        <pre class="bg-neutral-900 border border-neutral-800 rounded p-4 text-xs overflow-x-auto text-neutral-300"><span class="text-purple-400">const</span> ws = <span class="text-purple-400">new</span> WebSocket(<span class="text-amber-300">`ws://localhost:3000/ws?token=${'$'}{token}`</span>);
+ws.onmessage = (e) =&gt; {
+  <span class="text-purple-400">const</span> { event, data, timestamp } = JSON.parse(e.data);
+  console.log(event, data); <span class="text-neutral-500">// status | message | receipt | presence | ...</span>
+};</pre>
+      </section>
+
     </div>
   </div>
 
   <!-- Footer -->
   <footer class="mt-12 border-t border-border-dark pt-8 pb-8 text-center">
-    <p class="text-neutral-600 text-xs uppercase tracking-widest font-medium">Built with Bun + Express + whatsapp-web.js</p>
+    <p class="text-neutral-600 text-xs uppercase tracking-widest font-medium">Built with Go + Fiber + whatsmeow</p>
   </footer>
 
   <script>

@@ -925,6 +925,246 @@
         </div>
       </div>
 
+      <!-- ═══ Explore: statuses, media, contacts, user info, misc ═══ -->
+      <div
+        class="mt-6 bg-white dark:bg-surface-dark rounded border border-border-light dark:border-border-dark"
+        id="exploreSection"
+      >
+        <div
+          class="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between"
+        >
+          <h2
+            class="text-sm font-semibold text-neutral-900 dark:text-white uppercase tracking-wider"
+          >
+            Explore
+          </h2>
+          <span class="material-symbols-outlined text-neutral-400 text-[20px]"
+            >travel_explore</span
+          >
+        </div>
+
+        <!-- Tab bar -->
+        <div
+          class="flex border-b border-border-light dark:border-border-dark overflow-x-auto"
+        >
+          <button
+            class="explore-tab-btn active whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 border-neutral-900 dark:border-white text-neutral-900 dark:text-white transition-colors"
+            onclick="switchExploreTab(this, 'expInbox')"
+          >
+            Inbox
+          </button>
+          <button
+            class="explore-tab-btn whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+            onclick="switchExploreTab(this, 'expActivity')"
+          >
+            Live Activity
+          </button>
+          <button
+            class="explore-tab-btn whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+            onclick="switchExploreTab(this, 'expMedia')"
+          >
+            Media
+          </button>
+          <button
+            class="explore-tab-btn whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+            onclick="switchExploreTab(this, 'expContacts')"
+          >
+            Contacts
+          </button>
+          <button
+            class="explore-tab-btn whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+            onclick="switchExploreTab(this, 'expLookup')"
+          >
+            User Lookup
+          </button>
+          <button
+            class="explore-tab-btn whitespace-nowrap px-4 py-3 text-sm font-medium border-b-2 border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+            onclick="switchExploreTab(this, 'expMisc')"
+          >
+            Misc
+          </button>
+        </div>
+
+        <!-- Inbox: conversation list (like the WhatsApp / email first page) -->
+        <div class="explore-tab-content active p-6" id="expInbox">
+          <div class="flex items-center justify-between mb-4 gap-3 flex-wrap">
+            <p class="text-xs text-neutral-500 dark:text-neutral-400">
+              Your conversations, most recent first
+            </p>
+            <div class="flex items-center gap-3">
+              <label class="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 cursor-pointer">
+                <input type="checkbox" id="inboxEnrich" class="accent-neutral-900 dark:accent-white" />
+                photos &amp; about
+              </label>
+              <button
+                class="text-xs px-3 py-1.5 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-300"
+                onclick="loadInbox()"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="space-y-1 max-h-[440px] overflow-y-auto" id="inboxList">
+              <div class="text-neutral-400 dark:text-neutral-600 py-8 text-center text-sm">
+                Loading conversations…
+              </div>
+            </div>
+            <div id="conversationDetail">
+              <div class="text-neutral-400 dark:text-neutral-600 py-8 text-center text-sm">
+                Select a conversation to view its messages and actions
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Activity (realtime websocket events) -->
+        <div class="explore-tab-content p-6" id="expActivity" style="display: none">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-xs text-neutral-500 dark:text-neutral-400">
+              Realtime event stream over the WebSocket —
+              <span id="wsState" class="font-medium">connecting…</span>
+            </p>
+            <button
+              class="text-xs px-3 py-1.5 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-300"
+              onclick="clearActivity()"
+            >
+              Clear
+            </button>
+          </div>
+          <div
+            class="space-y-1.5 max-h-[360px] overflow-y-auto font-mono text-xs"
+            id="activityLog"
+          >
+            <div class="text-neutral-400 dark:text-neutral-600 py-8 text-center">
+              Waiting for live events…
+            </div>
+          </div>
+        </div>
+
+        <!-- Media from chats / groups -->
+        <div class="explore-tab-content p-6" id="expMedia" style="display: none">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-xs text-neutral-500 dark:text-neutral-400">
+              Recently received images, videos, audio &amp; documents
+            </p>
+            <button
+              class="text-xs px-3 py-1.5 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-300"
+              onclick="loadMedia()"
+            >
+              Refresh
+            </button>
+          </div>
+          <div id="mediaPreview" class="mb-4"></div>
+          <div class="space-y-2 max-h-[360px] overflow-y-auto" id="mediaList">
+            <div class="text-neutral-400 dark:text-neutral-600 py-8 text-center text-sm">
+              No media received yet
+            </div>
+          </div>
+        </div>
+
+        <!-- Contacts -->
+        <div class="explore-tab-content p-6" id="expContacts" style="display: none">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-xs text-neutral-500 dark:text-neutral-400">
+              Synced contacts from your WhatsApp account
+            </p>
+            <button
+              class="text-xs px-3 py-1.5 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-300"
+              onclick="loadContacts()"
+            >
+              Load contacts
+            </button>
+          </div>
+          <div class="space-y-1.5 max-h-[360px] overflow-y-auto" id="contactsList">
+            <div class="text-neutral-400 dark:text-neutral-600 py-8 text-center text-sm">
+              Click “Load contacts” to fetch your contact list
+            </div>
+          </div>
+        </div>
+
+        <!-- User lookup -->
+        <div class="explore-tab-content p-6" id="expLookup" style="display: none">
+          <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <input
+              id="lookupInput"
+              class="flex-1 px-4 py-2.5 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white text-sm placeholder-neutral-400 dark:placeholder-neutral-600 font-mono"
+              placeholder="Phone number or JID (e.g. 254712345678)"
+              type="text"
+            />
+          </div>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <button
+              class="px-4 py-2 rounded bg-neutral-900 dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-200 text-white dark:text-neutral-900 font-medium text-sm"
+              onclick="lookupCheck()"
+            >
+              On WhatsApp?
+            </button>
+            <button
+              class="px-4 py-2 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-neutral-700 dark:text-neutral-300 font-medium text-sm"
+              onclick="lookupInfo()"
+            >
+              User info
+            </button>
+            <button
+              class="px-4 py-2 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-neutral-700 dark:text-neutral-300 font-medium text-sm"
+              onclick="lookupPicture()"
+            >
+              Profile picture
+            </button>
+            <button
+              class="px-4 py-2 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-neutral-700 dark:text-neutral-300 font-medium text-sm"
+              onclick="lookupBusiness()"
+            >
+              Business profile
+            </button>
+          </div>
+          <div id="lookupResult"></div>
+        </div>
+
+        <!-- Misc -->
+        <div class="explore-tab-content p-6" id="expMisc" style="display: none">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Status / about -->
+            <div>
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">Your status (about)</h4>
+              <div class="flex gap-2">
+                <input id="miscStatus" class="flex-1 px-3 py-2 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm" placeholder="Hey there! I am using WhatsApp." />
+                <button class="px-4 py-2 rounded bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-sm font-medium" onclick="miscSetStatus()">Set</button>
+              </div>
+            </div>
+            <!-- Presence -->
+            <div>
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">Presence</h4>
+              <div class="flex gap-2">
+                <button class="px-4 py-2 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-sm font-medium" onclick="miscPresence('available')">Go online</button>
+                <button class="px-4 py-2 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-sm font-medium" onclick="miscPresence('unavailable')">Go offline</button>
+              </div>
+            </div>
+            <!-- Block / unblock -->
+            <div>
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">Block list</h4>
+              <div class="flex gap-2">
+                <input id="miscBlockJid" class="flex-1 px-3 py-2 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-sm font-mono" placeholder="Number or JID" />
+                <button class="px-3 py-2 rounded border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-sm font-medium" onclick="miscBlock(true)">Block</button>
+                <button class="px-3 py-2 rounded border border-neutral-200 dark:border-neutral-700 text-sm font-medium" onclick="miscBlock(false)">Unblock</button>
+              </div>
+              <div id="miscBlocklist" class="mt-2 text-xs text-neutral-500"></div>
+              <button class="mt-2 text-xs text-neutral-500 underline" onclick="miscLoadBlocklist()">Show blocked users</button>
+            </div>
+            <!-- Privacy + channels -->
+            <div>
+              <h4 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">Privacy &amp; channels</h4>
+              <div class="flex gap-2">
+                <button class="px-4 py-2 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-sm font-medium" onclick="miscPrivacy()">Privacy settings</button>
+                <button class="px-4 py-2 rounded border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900 text-sm font-medium" onclick="miscNewsletters()">My channels</button>
+              </div>
+              <pre id="miscOutput" class="mt-3 text-xs bg-neutral-50 dark:bg-neutral-900 rounded p-3 overflow-x-auto max-h-[160px] hidden"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- close dashboardContent -->
     </div>
 
@@ -935,7 +1175,7 @@
       <p
         class="text-neutral-400 dark:text-neutral-600 text-xs uppercase tracking-widest font-medium"
       >
-        Built with Bun + Express + whatsapp-web.js
+        Built with Go + Fiber + whatsmeow
       </p>
     </footer>
 
